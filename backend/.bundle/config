@@ -1,0 +1,2 @@
+---
+BUNDLE_BUILD__MYSQL2: "--with-mysql-config=/opt/homebrew/bin/mysql_config"
