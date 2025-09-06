@@ -1,2 +1,2 @@
 ---
-BUNDLE_BUILD__MYSQL2: "--with-ldflags=-L/opt/homebrew/opt/zstd/lib -L/opt/homebrew/opt/openssl/lib --with-cppflags=-I/opt/homebrew/opt/zstd/include -I/opt/homebrew/opt/openssl/include"
+BUNDLE_BUILD__MYSQL2: "--with-mysql-lib=/opt/homebrew/opt/mysql/lib --with-mysql-dir=/opt/homebrew/opt/mysql --with-mysql-config=/opt/homebrew/opt/mysql/bin/mysql_config --with-ldflags=-L/opt/homebrew/opt/zstd/lib --with-cppflags=-I/opt/homebrew/opt/zstd/include -L/opt/homebrew/opt/openssl@3/lib -I/opt/homebrew/opt/openssl@3/include"

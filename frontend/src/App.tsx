@@ -14,7 +14,7 @@ import MusicNoteIcon from '@mui/icons-material/MusicNote';
 import PersonIcon from '@mui/icons-material/Person';
 import AlbumIcon from '@mui/icons-material/Album';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import Songs from './components/Songs';
+import Songs from './components/Tracks';
 import Artists from './components/Artists';
 import Albums from './components/Albums';
 

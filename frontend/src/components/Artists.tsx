@@ -14,11 +14,11 @@ import {
   Box
 } from '@mui/material';
 
-// Define the structure of an Artist object
+// Define the structure of an Artist object to match the database
 interface Artist {
-  id: number;
+  artist_id: string;
   name: string;
-  genre: string;
+  genres: string; // genres is a JSON string
   popularity: number;
 }
 
@@ -59,6 +59,16 @@ const Artists: React.FC = () => {
     return <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>;
   }
 
+  // Helper function to format the genres string
+  const formatGenres = (genresString: string) => {
+    try {
+      const genres = JSON.parse(genresString);
+      return genres.join(', ');
+    } catch (e) {
+      return genresString; // Return raw string if it's not valid JSON
+    }
+  };
+
   return (
     <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column', borderRadius: 2 }}>
         <Typography component="h2" variant="h6" color="primary" gutterBottom>
@@ -70,16 +80,16 @@ const Artists: React.FC = () => {
                     <TableRow>
                         <TableCell>#</TableCell>
                         <TableCell>Name</TableCell>
-                        <TableCell>Genre</TableCell>
+                        <TableCell>Genres</TableCell>
                         <TableCell align="right">Popularity</TableCell>
                     </TableRow>
                 </TableHead>
                 <TableBody>
                     {artists.map((artist, index) => (
-                        <TableRow key={artist.id} hover>
+                        <TableRow key={artist.artist_id} hover>
                             <TableCell>{index + 1}</TableCell>
                             <TableCell>{artist.name}</TableCell>
-                            <TableCell>{artist.genre}</TableCell>
+                            <TableCell>{formatGenres(artist.genres)}</TableCell>
                             <TableCell align="right">{artist.popularity}</TableCell>
                         </TableRow>
                     ))}

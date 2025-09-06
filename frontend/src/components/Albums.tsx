@@ -14,9 +14,9 @@ import {
   Box
 } from '@mui/material';
 
-// Define the structure of an Album object
+// Define the structure of an Album object to match the database
 interface Album {
-  id: number;
+  album_id: string;
   name: string;
   album_type: string;
   release_date: string;
@@ -76,7 +76,7 @@ const Albums: React.FC = () => {
                 </TableHead>
                 <TableBody>
                     {albums.map((album, index) => (
-                        <TableRow key={album.id} hover>
+                        <TableRow key={album.album_id} hover>
                             <TableCell>{index + 1}</TableCell>
                             <TableCell>{album.name}</TableCell>
                             <TableCell>{album.album_type}</TableCell>
