@@ -27,8 +27,7 @@ from dotenv import load_dotenv
 load_dotenv()
 CLIENT_ID = os.getenv('CLIENT_ID')
 CLIENT_SECRET = os.getenv('CLIENT_SECRET')
-REDIRECT_URI = "https://localhost:8888/callback"
-
+REDIRECT_URI = "http://127.0.0.1:8888/callback"
 # Define the scopes your application needs.
 # You can find a full list here: https://developer.spotify.com/documentation/web-api/concepts/scopes
 # For general use, these are a good starting point.
