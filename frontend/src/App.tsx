@@ -1,20 +1,22 @@
 import React, { useState } from 'react';
-import { 
-  CssBaseline, 
-  AppBar, 
-  Toolbar, 
-  Typography, 
-  Container, 
-  Box, 
-  BottomNavigation, 
+import {
+  CssBaseline,
+  AppBar,
+  Toolbar,
+  Typography,
+  Container,
+  Box,
+  BottomNavigation,
   BottomNavigationAction,
   Paper
 } from '@mui/material';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
 import PersonIcon from '@mui/icons-material/Person';
+import AlbumIcon from '@mui/icons-material/Album';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import Songs from './components/Songs';
 import Artists from './components/Artists';
+import Albums from './components/Albums';
 
 // Define a dark theme for the application
 const darkTheme = createTheme({
@@ -51,10 +53,11 @@ function App() {
             </Typography>
           </Toolbar>
         </AppBar>
-        
+
         <Container component="main" sx={{ flexGrow: 1, py: 4, mb: 7 }}>
           {value === 0 && <Songs />}
           {value === 1 && <Artists />}
+          {value === 2 && <Albums />}
         </Container>
 
         <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0 }} elevation={3}>
@@ -68,6 +71,7 @@ function App() {
           >
             <BottomNavigationAction label="Top Songs" icon={<MusicNoteIcon />} />
             <BottomNavigationAction label="Top Artists" icon={<PersonIcon />} />
+            <BottomNavigationAction label="Top Albums" icon={<AlbumIcon />} />
           </BottomNavigation>
         </Paper>
       </Box>
