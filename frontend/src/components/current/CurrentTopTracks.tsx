@@ -111,9 +111,27 @@ const CurrentTopTracks: React.FC<CurrentTracksProps> = ({ viewMode, spotifyApi }
         </TableContainer>
       ) : (
         <Grid container spacing={2}>
-          {tracks.map((track) => (
+          {tracks.map((track, index) => (
             <Grid item xs={6} sm={4} md={3} key={track.id}>
-              <Card sx={{ height: '100%', backgroundColor: 'background.card' }}>
+              <Card sx={{ height: '100%', backgroundColor: 'background.card', position: 'relative' }}>
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: 8,
+                    left: 8,
+                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                    color: 'white',
+                    borderRadius: '50%',
+                    width: 32,
+                    height: 32,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1,
+                  }}
+                >
+                  <Typography variant="body1" component="span">{index + 1}</Typography>
+                </Box>
                 <img
                   src={track.album.images[0]?.url || 'https://via.placeholder.com/150'}
                   alt={track.name}

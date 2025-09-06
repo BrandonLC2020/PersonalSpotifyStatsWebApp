@@ -6,14 +6,13 @@ import {
   Typography,
   Container,
   Box,
-  BottomNavigation,
-  BottomNavigationAction,
-  Paper,
   IconButton,
   ToggleButton,
   ToggleButtonGroup,
   CircularProgress,
   Alert,
+  Tabs,
+  Tab
 } from '@mui/material';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
 import PersonIcon from '@mui/icons-material/Person';
@@ -71,6 +70,10 @@ function App() {
     }
   };
 
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setValue(newValue);
+  };
+
   const renderContent = () => {
     if (spotifyLoading) {
       return (
@@ -87,7 +90,7 @@ function App() {
       if (value === 0) return <CurrentTopTracks viewMode={viewMode} spotifyApi={spotifyApi!} />;
       if (value === 1) return <CurrentTopArtists viewMode={viewMode} spotifyApi={spotifyApi!} />;
     } else { // monthly
-      if (value === 0) return <MonthlyTopTracks viewMode={viewMode} />;
+      if (value === 0) return <MonthlyTopTracks viewMode={viewMode} spotifyApi={spotifyApi!} />;
       if (value === 1) return <MonthlyTopArtists viewMode={viewMode} />;
       if (value === 2) return <MonthlyTopAlbums viewMode={viewMode} />;
     }
@@ -122,26 +125,23 @@ function App() {
               {viewMode === 'table' ? <ViewModuleIcon /> : <ViewListIcon />}
             </IconButton>
           </Toolbar>
+          <Tabs
+            value={value}
+            onChange={handleTabChange}
+            indicatorColor="primary"
+            textColor="inherit"
+            variant="fullWidth"
+            aria-label="navigation tabs"
+          >
+            <Tab icon={<MusicNoteIcon />} label="Top Songs" />
+            <Tab icon={<PersonIcon />} label="Top Artists" />
+            {timeRange === 'monthly' && <Tab icon={<AlbumIcon />} label="Top Albums" />}
+          </Tabs>
         </AppBar>
 
-        <Container component="main" sx={{ flexGrow: 1, py: 4, mb: 7 }}>
+        <Container component="main" sx={{ flexGrow: 1, py: 4 }}>
           {renderContent()}
         </Container>
-
-        <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0 }} elevation={3}>
-          <BottomNavigation
-            showLabels
-            value={value}
-            onChange={(event: React.SyntheticEvent, newValue: number) => {
-              setValue(newValue);
-            }}
-            sx={{ background: '#1e1e1e' }}
-          >
-            <BottomNavigationAction label="Top Songs" icon={<MusicNoteIcon />} />
-            <BottomNavigationAction label="Top Artists" icon={<PersonIcon />} />
-            {timeRange === 'monthly' && <BottomNavigationAction label="Top Albums" icon={<AlbumIcon />} />}
-          </BottomNavigation>
-        </Paper>
       </Box>
     </ThemeProvider>
   );
