@@ -34,17 +34,32 @@ This web application displays your personal Spotify statistics, featuring a Reac
 
 -----
 
-## Database and API Connection
+## Environment Variables and Configuration
 
-This application connects to an AWS RDS MySQL database for historical data and uses the Spotify Web API for live data.
+Before running the application, you'll need to set up your environment variables for both the backend and frontend. There are `sample.env` files in both the `backend` and `frontend` directories to use as a template.
 
-### Database
+### Backend (`backend/.env`)
 
-The `bin/dev` script automates creating an SSH tunnel to a database for local development, using environment variables from your `.env` file (`BASTION_HOST`, `BASTION_USER`, etc.).
+The backend requires credentials for your database and the bastion host used for the SSH tunnel.
 
-### Spotify API
+  * `DB_PASSWORD`: Your database password.
+  * `DB_USERNAME`: Your database username.
+  * `DB_NAME`: The name of your database.
+  * `DB_HOST`: The hostname of your database instance (e.g., an AWS RDS endpoint).
+  * `BASTION_HOST`: The address of your SSH bastion host.
+  * `BASTION_USER`: The username for the bastion host.
+  * `BASTION_KEYFILE_PATH`: The local path to your SSH private key for the bastion host (e.g., `~/.ssh/my-key.pem`).
 
-The frontend connects directly to the Spotify Web API to fetch your current top tracks and artists, as well as to retrieve album art for the monthly top tracks view.
+### Frontend (`frontend/.env`)
+
+The frontend requires credentials for the Spotify API and AWS Secrets Manager (which is used to securely store the Spotify refresh token).
+
+  * `REACT_APP_CLIENT_ID`: Your Spotify application's Client ID.
+  * `REACT_APP_CLIENT_SECRET`: Your Spotify application's Client Secret.
+  * `REACT_APP_AWS_ACCESS_KEY_ID`: Your AWS access key ID.
+  * `REACT_APP_AWS_SECRET_ACCESS_KEY`: Your AWS secret access key.
+  * `REACT_APP_AWS_DEFAULT_REGION`: The AWS region where your secret is stored.
+  * `REACT_APP_SECRET_NAME`: The name of the secret in AWS Secrets Manager.
 
 -----
 
@@ -71,7 +86,7 @@ The frontend connects directly to the Spotify Web API to fetch your current top 
     bundle install
     ```
 4.  **Set up the database**:
-      * Create a `.env` file in the `backend` directory with your database and bastion host credentials.
+      * Create and populate the `.env` file as described above.
       * Create and migrate the database:
         ```bash
         rails db:create
@@ -93,7 +108,7 @@ The frontend connects directly to the Spotify Web API to fetch your current top 
     npm install
     ```
 3.  **Set up Environment Variables**:
-      * Create a `.env` file in the `frontend` directory and add your Spotify and AWS credentials.
+      * Create and populate the `.env` file as described above.
 4.  **Start the React development server**:
     ```bash
     npm start
