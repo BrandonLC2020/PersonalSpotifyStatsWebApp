@@ -1,15 +1,17 @@
 default: &default
   adapter: mysql2
+  encoding: utf8mb4
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
-  username: <%= ENV['DB_USERNAME'] %>
-  password: <%= ENV['DB_PASSWORD'] %>
-  host: <%= ENV['DB_HOST'] %>
-  database: <%= ENV['DB_NAME'] %>
-  ssl_mode: :verify_identity
-  sslca: "config/aws-rds-ca-2019-root.pem"
-  sslverify: true
+  timeout: 5000
+  username: <%= puts "DB_USERNAME: #{ENV['DB_USERNAME']}"; ENV['DB_USERNAME'] %>
+  password: <%= puts "DB_PASSWORD: #{ENV['DB_PASSWORD']}"; ENV['DB_PASSWORD'] %>
+  host: <%= puts "DB_HOST: #{ENV['DB_HOST']}"; ENV['DB_HOST'] %>
+  database: <%= puts "DB_NAME: #{ENV['DB_NAME']}"; ENV['DB_NAME'] %>
+  ssl_mode: :required
+  port: 3306
 
-
+  # sslca: "config/aws-rds-ca-2019-root.pem"
+  # sslverify: true
 
 development:
   <<: *default
