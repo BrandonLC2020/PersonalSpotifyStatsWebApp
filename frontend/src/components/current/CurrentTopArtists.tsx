@@ -17,8 +17,9 @@ import {
   Link,
   CardMedia
 } from '@mui/material';
-import useSpotifyWeb from '../../hooks/useSpotifyWeb';
+import SpotifyWebApi from 'spotify-web-api-js';
 
+// Define the structure of an Artist object
 interface Artist {
   id: string;
   name: string;
@@ -29,44 +30,43 @@ interface Artist {
   };
 }
 
+// Update props to receive the spotifyApi object
 interface CurrentArtistsProps {
   viewMode: 'table' | 'grid';
+  spotifyApi: SpotifyWebApi.SpotifyWebApiJs;
 }
 
-const CurrentTopArtists: React.FC<CurrentArtistsProps> = ({ viewMode }) => {
-  const { spotifyApi, loading: spotifyLoading, error: spotifyError } = useSpotifyWeb();
+const CurrentTopArtists: React.FC<CurrentArtistsProps> = ({ viewMode, spotifyApi }) => {
+  // Remove the useSpotifyWeb() hook call
   const [artists, setArtists] = useState<Artist[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchTopArtists = async () => {
-      if (!spotifyApi) return;
-
+      setLoading(true);
       try {
-        setLoading(true);
         const response = await spotifyApi.getMyTopArtists({ limit: 50, time_range: 'short_term' });
         setArtists(response.items as Artist[]);
         setError(null);
       } catch (err) {
         console.error('Failed to fetch top artists from Spotify:', err);
-        setError('Failed to fetch top artists. Please ensure you are logged in to Spotify.');
+        setError('Failed to fetch top artists from Spotify.');
       } finally {
         setLoading(false);
       }
     };
 
-    if (!spotifyLoading) {
-      fetchTopArtists();
-    }
-  }, [spotifyApi, spotifyLoading]);
+    fetchTopArtists();
+    
+  }, [spotifyApi]); // Effect now depends on the stable spotifyApi prop
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     console.error('Image failed to load:', e.currentTarget.src);
     e.currentTarget.src = 'https://via.placeholder.com/150';
   };
 
-  if (loading || spotifyLoading) {
+  if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
         <CircularProgress />
@@ -74,8 +74,8 @@ const CurrentTopArtists: React.FC<CurrentArtistsProps> = ({ viewMode }) => {
     );
   }
 
-  if (error || spotifyError) {
-    return <Alert severity="error" sx={{ mt: 2 }}>{error || spotifyError?.message}</Alert>;
+  if (error) {
+    return <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>;
   }
 
   return (

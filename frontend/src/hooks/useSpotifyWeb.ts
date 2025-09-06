@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 import SpotifyWebApi from 'spotify-web-api-js';
+import axios from 'axios';
 
 const useSpotifyWeb = () => {
   const [spotifyApi, setSpotifyApi] = useState<SpotifyWebApi.SpotifyWebApiJs | null>(null);
@@ -10,6 +11,14 @@ const useSpotifyWeb = () => {
   useEffect(() => {
     const fetchTokenAndInitSpotify = async () => {
       try {
+        // --- Get CLIENT_ID and CLIENT_SECRET from .env file ---
+        const clientId = process.env.REACT_APP_CLIENT_ID;
+        const clientSecret = process.env.REACT_APP_CLIENT_SECRET;
+
+        if (!clientId || !clientSecret) {
+          throw new Error('Missing REACT_APP_CLIENT_ID or REACT_APP_CLIENT_SECRET in your .env file');
+        }
+
         // --- AWS Secrets Manager Configuration ---
         const client = new SecretsManagerClient({
           region: process.env.REACT_APP_AWS_DEFAULT_REGION,
@@ -24,14 +33,35 @@ const useSpotifyWeb = () => {
 
         if (data.SecretString) {
           const secret = JSON.parse(data.SecretString);
-          const accessToken = secret.spotify_refresh_token;
+          const refreshToken = secret.spotify_refresh_token;
 
-          if (accessToken) {
-            const sp = new SpotifyWebApi();
-            sp.setAccessToken(accessToken);
-            setSpotifyApi(sp);
+          if (refreshToken) {
+            // --- Exchange Refresh Token for Access Token ---
+            const response = await axios.post(
+              'https://accounts.spotify.com/api/token',
+              new URLSearchParams({
+                grant_type: 'refresh_token',
+                refresh_token: refreshToken,
+              }),
+              {
+                headers: {
+                  'Content-Type': 'application/x-www-form-urlencoded',
+                  Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
+                },
+              }
+            );
+
+            const accessToken = response.data.access_token;
+
+            if (accessToken) {
+              const sp = new SpotifyWebApi();
+              sp.setAccessToken(accessToken);
+              setSpotifyApi(sp);
+            } else {
+              throw new Error('Spotify access token not found in response');
+            }
           } else {
-            throw new Error('Spotify access token not found in secret');
+            throw new Error('Required secrets not found in AWS Secrets Manager');
           }
         } else {
           throw new Error('SecretString is empty');

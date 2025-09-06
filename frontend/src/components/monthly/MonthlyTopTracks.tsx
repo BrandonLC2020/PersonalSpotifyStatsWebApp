@@ -33,7 +33,7 @@ interface TracksProps {
     viewMode: 'table' | 'grid';
 }
 
-const Tracks: React.FC<TracksProps> = ({ viewMode }) => {
+const MonthlyTopTracks: React.FC<TracksProps> = ({ viewMode }) => {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -112,4 +112,4 @@ const Tracks: React.FC<TracksProps> = ({ viewMode }) => {
   );
 };
 
-export default Tracks;
+export default MonthlyTopTracks;

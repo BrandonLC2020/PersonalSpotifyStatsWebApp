@@ -38,7 +38,7 @@ interface ArtistsProps {
   viewMode: 'table' | 'grid';
 }
 
-const Artists: React.FC<ArtistsProps> = ({ viewMode }) => {
+const MonthlyTopArtists: React.FC<ArtistsProps> = ({ viewMode }) => {
   const [artists, setArtists] = useState<Artist[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -133,4 +133,4 @@ const Artists: React.FC<ArtistsProps> = ({ viewMode }) => {
   );
 };
 
-export default Artists;
+export default MonthlyTopArtists;

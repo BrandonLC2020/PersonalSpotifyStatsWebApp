@@ -38,7 +38,7 @@ interface AlbumsProps {
   viewMode: 'table' | 'grid';
 }
 
-const Albums: React.FC<AlbumsProps> = ({ viewMode }) => {
+const MonthlyTopAlbums: React.FC<AlbumsProps> = ({ viewMode }) => {
   const [albums, setAlbums] = useState<Album[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -135,4 +135,4 @@ const Albums: React.FC<AlbumsProps> = ({ viewMode }) => {
   );
 };
 
-export default Albums;
+export default MonthlyTopAlbums;
