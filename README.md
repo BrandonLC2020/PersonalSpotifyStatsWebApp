@@ -1,14 +1,17 @@
 # Personal Spotify Stats Web App
 
-This web application displays your personal Spotify statistics. It features a React frontend and a Ruby on Rails backend.
+This web application displays your personal Spotify statistics, featuring a React frontend and a Ruby on Rails backend. It offers both real-time and historical views of your listening habits.
 
 -----
 
 ## Features
 
-  * **View Top Tracks**: See a list of your most played tracks.
+  * **Current & Monthly Stats**: Toggle between your current, real-time listening stats and your historical monthly data.
+  * **View Top Tracks**: See a list of your most played tracks, complete with album art.
   * **View Top Artists**: Discover your most listened to artists.
   * **View Top Albums**: See a list of your most played albums.
+  * **Interactive UI**: A clean, tab-based navigation and a grid/table view toggle to customize your experience.
+  * **Historical Data Grouping**: Monthly stats are organized in an accordion view, grouped by month and year for easy browsing.
 
 -----
 
@@ -27,21 +30,21 @@ This web application displays your personal Spotify statistics. It features a Re
   * **TypeScript**: A typed superset of JavaScript that compiles to plain JavaScript.
   * **Material UI**: A popular React UI framework.
   * **Axios**: A promise-based HTTP client for the browser and Node.js.
+  * **Spotify Web API**: Used to fetch real-time user data and album artwork.
 
 -----
 
-## Database Connection
+## Database and API Connection
 
-This application is designed to connect to an AWS RDS MySQL database through an AWS EC2 bastion host for local development.
+This application connects to an AWS RDS MySQL database for historical data and uses the Spotify Web API for live data.
 
-The `bin/dev` script automates the process of creating an SSH tunnel to the database. It uses the following environment variables from your `.env` file:
+### Database
 
-  * `BASTION_HOST`
-  * `BASTION_USER`
-  * `BASTION_KEYFILE_PATH`
-  * `DB_HOST`
+The `bin/dev` script automates creating an SSH tunnel to a database for local development, using environment variables from your `.env` file (`BASTION_HOST`, `BASTION_USER`, etc.).
 
-The `config/database.yml` file is configured to connect to the local port of the SSH tunnel in the development environment and directly to the RDS instance in production.
+### Spotify API
+
+The frontend connects directly to the Spotify Web API to fetch your current top tracks and artists, as well as to retrieve album art for the monthly top tracks view.
 
 -----
 
@@ -68,16 +71,7 @@ The `config/database.yml` file is configured to connect to the local port of the
     bundle install
     ```
 4.  **Set up the database**:
-      * Create a `.env` file in the `backend` directory and add the following environment variables:
-        ```
-        DB_PASSWORD=your_database_password
-        DB_USERNAME=your_database_username
-        DB_NAME=your_database_name
-        BASTION_HOST=your_bastion_host
-        BASTION_USER=your_bastion_user
-        BASTION_KEYFILE_PATH=your_bastion_keyfile_path
-        DB_HOST=your_database_host
-        ```
+      * Create a `.env` file in the `backend` directory with your database and bastion host credentials.
       * Create and migrate the database:
         ```bash
         rails db:create
@@ -98,7 +92,9 @@ The `config/database.yml` file is configured to connect to the local port of the
     ```bash
     npm install
     ```
-3.  **Start the React development server**:
+3.  **Set up Environment Variables**:
+      * Create a `.env` file in the `frontend` directory and add your Spotify and AWS credentials.
+4.  **Start the React development server**:
     ```bash
     npm start
     ```
@@ -109,11 +105,11 @@ The `config/database.yml` file is configured to connect to the local port of the
 
 ## API Endpoints
 
-The backend provides the following API endpoints:
+The backend provides the following API endpoints for the historical data view:
 
-  * `GET /api/tracks`: Returns a list of the user's top tracks.
-  * `GET /api/artists`: Returns a list of the user's top artists.
-  * `GET /api/albums`: Returns a list of the user's top albums.
+  * `GET /api/tracks`: Returns a list of the user's top tracks, grouped by month and year.
+  * `GET /api/artists`: Returns a list of the user's top artists, grouped by month and year.
+  * `GET /api/albums`: Returns a list of the user's top albums, grouped by month and year.
 
 -----
 
