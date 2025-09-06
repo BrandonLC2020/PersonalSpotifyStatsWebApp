@@ -5,6 +5,11 @@ default: &default
   password: <%= ENV['DB_PASSWORD'] %>
   host: <%= ENV['DB_HOST'] %>
   database: <%= ENV['DB_NAME'] %>
+  ssl_mode: :verify_identity
+  sslca: "config/aws-rds-ca-2019-root.pem"
+  sslverify: true
+
+
 
 development:
   <<: *default
