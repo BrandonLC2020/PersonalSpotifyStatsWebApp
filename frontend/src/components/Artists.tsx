@@ -14,7 +14,6 @@ import {
   Box,
   Grid,
   Card,
-  CardMedia,
   CardContent
 } from '@mui/material';
 
@@ -27,7 +26,7 @@ interface Image {
 interface Artist {
   artist_id: string;
   name: string;
-  genres: string; 
+  genres: string;
   popularity: number;
   images: Image[];
 }
@@ -48,7 +47,6 @@ const Artists: React.FC<ArtistsProps> = ({ viewMode }) => {
     const fetchArtists = async () => {
       try {
         const response = await axios.get<Artist[]>(API_URL);
-        console.log('Artists data from backend:', response.data); // <-- Added for debugging
         setArtists(response.data);
         setError(null);
       } catch (err) {
@@ -61,6 +59,11 @@ const Artists: React.FC<ArtistsProps> = ({ viewMode }) => {
 
     fetchArtists();
   }, []);
+
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    console.error('Image failed to load:', e.currentTarget.src);
+    e.currentTarget.src = 'https://via.placeholder.com/150'; // Fallback to placeholder on error
+  };
 
   if (loading) {
     return (
@@ -105,12 +108,16 @@ const Artists: React.FC<ArtistsProps> = ({ viewMode }) => {
           {artists.map((artist) => (
             <Grid item xs={6} sm={4} md={3} key={artist.artist_id}>
               <Card>
-                <CardMedia
-                  component="img"
-                  height="140"
-                  image={artist.images?.[0]?.url || 'https://via.placeholder.com/150'}
+                <img
+                  src={artist.images?.[0]?.url || 'https://via.placeholder.com/150'}
                   alt={artist.name}
-                  sx={{ objectFit: 'cover' }}
+                  onError={handleImageError}
+                  style={{
+                    width: '100%',
+                    aspectRatio: '1 / 1', // Ensures a square aspect ratio
+                    objectFit: 'cover', // Ensures the image covers the area without distortion
+                    // Removed: border: '1px solid red'
+                  }}
                 />
                 <CardContent>
                   <Typography gutterBottom variant="h6" component="div">
