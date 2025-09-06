@@ -11,7 +11,10 @@ import {
   Paper,
   CircularProgress,
   Alert,
-  Box
+  Box,
+  Grid,
+  Card,
+  CardContent
 } from '@mui/material';
 
 // Define the structure of a Track object to match the database
@@ -26,7 +29,11 @@ interface Track {
 // The API endpoint for fetching tracks
 const API_URL = 'http://localhost:3001/api/tracks';
 
-const Tracks: React.FC = () => {
+interface TracksProps {
+    viewMode: 'table' | 'grid';
+}
+
+const Tracks: React.FC<TracksProps> = ({ viewMode }) => {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,33 +69,45 @@ const Tracks: React.FC = () => {
 
   return (
     <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column', borderRadius: 2 }}>
-        <Typography component="h2" variant="h6" color="primary" gutterBottom>
-            Top Tracks
-        </Typography>
+      <Typography component="h2" variant="h6" color="primary" gutterBottom>
+        Top Tracks
+      </Typography>
+      {viewMode === 'table' ? (
         <TableContainer>
-            <Table size="small">
-                <TableHead>
-                    <TableRow>
-                        <TableCell>#</TableCell>
-                        <TableCell>Title</TableCell>
-                        <TableCell>Artist IDs</TableCell>
-                        <TableCell>Album ID</TableCell>
-                        <TableCell align="right">Popularity</TableCell>
-                    </TableRow>
-                </TableHead>
-                <TableBody>
-                    {tracks.map((track, index) => (
-                        <TableRow key={track.track_id} hover>
-                            <TableCell>{index + 1}</TableCell>
-                            <TableCell>{track.name}</TableCell>
-                            <TableCell>{track.artist_ids}</TableCell>
-                            <TableCell>{track.album_id}</TableCell>
-                            <TableCell align="right">{track.popularity}</TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>#</TableCell>
+                <TableCell>Title</TableCell>
+                <TableCell align="right">Popularity</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {tracks.map((track, index) => (
+                <TableRow key={track.track_id} hover>
+                  <TableCell>{index + 1}</TableCell>
+                  <TableCell>{track.name}</TableCell>
+                  <TableCell align="right">{track.popularity}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </TableContainer>
+      ) : (
+        <Grid container spacing={2}>
+          {tracks.map((track) => (
+            <Grid item xs={6} sm={4} md={3} key={track.track_id}>
+              <Card>
+                <CardContent>
+                  <Typography gutterBottom variant="h6" component="div">
+                    {track.name}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )}
     </Paper>
   );
 };

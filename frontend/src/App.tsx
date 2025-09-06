@@ -8,11 +8,14 @@ import {
   Box,
   BottomNavigation,
   BottomNavigationAction,
-  Paper
+  Paper,
+  IconButton
 } from '@mui/material';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
 import PersonIcon from '@mui/icons-material/Person';
 import AlbumIcon from '@mui/icons-material/Album';
+import ViewListIcon from '@mui/icons-material/ViewList';
+import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import Songs from './components/Tracks';
 import Artists from './components/Artists';
@@ -40,6 +43,11 @@ const darkTheme = createTheme({
 
 function App() {
   const [value, setValue] = useState<number>(0);
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+
+  const handleViewChange = () => {
+    setViewMode(prevMode => (prevMode === 'table' ? 'grid' : 'table'));
+  };
 
   return (
     <ThemeProvider theme={darkTheme}>
@@ -48,16 +56,19 @@ function App() {
         <AppBar position="static" color="transparent" elevation={0} sx={{ borderBottom: '1px solid #292929' }}>
           <Toolbar>
             <MusicNoteIcon sx={{ mr: 2, color: 'primary.main' }} />
-            <Typography variant="h6" color="inherit" noWrap>
+            <Typography variant="h6" color="inherit" noWrap sx={{ flexGrow: 1 }}>
               My Spotify Stats
             </Typography>
+            <IconButton onClick={handleViewChange} color="inherit">
+              {viewMode === 'table' ? <ViewModuleIcon /> : <ViewListIcon />}
+            </IconButton>
           </Toolbar>
         </AppBar>
 
         <Container component="main" sx={{ flexGrow: 1, py: 4, mb: 7 }}>
-          {value === 0 && <Songs />}
-          {value === 1 && <Artists />}
-          {value === 2 && <Albums />}
+          {value === 0 && <Songs viewMode={viewMode} />}
+          {value === 1 && <Artists viewMode={viewMode} />}
+          {value === 2 && <Albums viewMode={viewMode} />}
         </Container>
 
         <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0 }} elevation={3}>
