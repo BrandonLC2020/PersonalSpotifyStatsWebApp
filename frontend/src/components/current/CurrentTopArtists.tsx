@@ -113,12 +113,15 @@ const CurrentTopArtists: React.FC<CurrentArtistsProps> = ({ viewMode, spotifyApi
           {artists.map((artist) => (
             <Grid item xs={6} sm={4} md={3} key={artist.id}>
               <Card sx={{ height: '100%', backgroundColor: 'background.card' }}>
-                <CardMedia
-                  component="img"
-                  height="140"
-                  image={artist.images[0]?.url || 'https://via.placeholder.com/150'}
+                <img
+                  src={artist.images[0]?.url || 'https://via.placeholder.com/150'}
                   alt={artist.name}
                   onError={handleImageError}
+                  style={{
+                    width: '100%',
+                    aspectRatio: '1 / 1',
+                    objectFit: 'cover',
+                  }}
                 />
                 <CardContent>
                   <Typography gutterBottom variant="h6" component="div">

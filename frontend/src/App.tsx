@@ -26,9 +26,8 @@ import MonthlyTopArtists from './components/monthly/MonthlyTopArtists';
 import MonthlyTopAlbums from './components/monthly/MonthlyTopAlbums';
 import CurrentTopTracks from './components/current/CurrentTopTracks';
 import CurrentTopArtists from './components/current/CurrentTopArtists';
-import useSpotifyWeb from './hooks/useSpotifyWeb'; // Import the hook
+import useSpotifyWeb from './hooks/useSpotifyWeb';
 
-// (Theme definition remains the same)
 const darkTheme = createTheme({
   palette: {
     mode: 'dark',
@@ -54,7 +53,6 @@ function App() {
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [timeRange, setTimeRange] = useState<'current' | 'monthly'>('current');
 
-  // Call the hook here, once for the entire app
   const { spotifyApi, loading: spotifyLoading, error: spotifyError } = useSpotifyWeb();
 
   const handleViewChange = () => {
@@ -101,7 +99,29 @@ function App() {
       <CssBaseline />
       <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         <AppBar position="static" color="transparent" elevation={0} sx={{ borderBottom: '1px solid #292929' }}>
-          {/* (Toolbar content remains the same) */}
+          <Toolbar>
+            <MusicNoteIcon sx={{ mr: 2, color: 'primary.main' }} />
+            <Typography variant="h6" color="inherit" noWrap sx={{ flexGrow: 1 }}>
+              My Spotify Stats
+            </Typography>
+            <ToggleButtonGroup
+              value={timeRange}
+              exclusive
+              onChange={handleTimeRangeChange}
+              aria-label="time range"
+              sx={{ marginRight: 2 }}
+            >
+              <ToggleButton value="current" aria-label="current">
+                Current
+              </ToggleButton>
+              <ToggleButton value="monthly" aria-label="monthly">
+                Monthly
+              </ToggleButton>
+            </ToggleButtonGroup>
+            <IconButton onClick={handleViewChange} color="inherit">
+              {viewMode === 'table' ? <ViewModuleIcon /> : <ViewListIcon />}
+            </IconButton>
+          </Toolbar>
         </AppBar>
 
         <Container component="main" sx={{ flexGrow: 1, py: 4, mb: 7 }}>
@@ -109,7 +129,18 @@ function App() {
         </Container>
 
         <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0 }} elevation={3}>
-          {/* (BottomNavigation remains the same) */}
+          <BottomNavigation
+            showLabels
+            value={value}
+            onChange={(event: React.SyntheticEvent, newValue: number) => {
+              setValue(newValue);
+            }}
+            sx={{ background: '#1e1e1e' }}
+          >
+            <BottomNavigationAction label="Top Songs" icon={<MusicNoteIcon />} />
+            <BottomNavigationAction label="Top Artists" icon={<PersonIcon />} />
+            {timeRange === 'monthly' && <BottomNavigationAction label="Top Albums" icon={<AlbumIcon />} />}
+          </BottomNavigation>
         </Paper>
       </Box>
     </ThemeProvider>
