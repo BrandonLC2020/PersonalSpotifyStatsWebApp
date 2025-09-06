@@ -97,7 +97,7 @@ const Tracks: React.FC<TracksProps> = ({ viewMode }) => {
         <Grid container spacing={2}>
           {tracks.map((track) => (
             <Grid item xs={6} sm={4} md={3} key={track.track_id}>
-              <Card>
+              <Card sx={{ height: '100%', backgroundColor: 'background.card' }}>
                 <CardContent>
                   <Typography gutterBottom variant="h6" component="div">
                     {track.name}

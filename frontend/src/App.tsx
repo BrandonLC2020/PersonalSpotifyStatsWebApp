@@ -17,7 +17,7 @@ import AlbumIcon from '@mui/icons-material/Album';
 import ViewListIcon from '@mui/icons-material/ViewList';
 import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import Songs from './components/Tracks';
+import Tracks from './components/Tracks';
 import Artists from './components/Artists';
 import Albums from './components/Albums';
 
@@ -31,6 +31,7 @@ const darkTheme = createTheme({
     background: {
       default: '#121212',
       paper: '#1e1e1e',
+      card: '#383838ff',
     },
   },
   typography: {
@@ -66,7 +67,7 @@ function App() {
         </AppBar>
 
         <Container component="main" sx={{ flexGrow: 1, py: 4, mb: 7 }}>
-          {value === 0 && <Songs viewMode={viewMode} />}
+          {value === 0 && <Tracks viewMode={viewMode} />}
           {value === 1 && <Artists viewMode={viewMode} />}
           {value === 2 && <Albums viewMode={viewMode} />}
         </Container>

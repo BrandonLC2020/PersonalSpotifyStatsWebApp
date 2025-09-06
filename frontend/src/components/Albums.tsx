@@ -109,7 +109,7 @@ const Albums: React.FC<AlbumsProps> = ({ viewMode }) => {
         <Grid container spacing={2}>
           {albums.map((album) => (
             <Grid item xs={6} sm={4} md={3} key={album.album_id}>
-              <Card>
+              <Card sx={{ height: '100%', backgroundColor: 'background.card' }}>
                 <img
                   src={album.images?.[0]?.url || 'https://via.placeholder.com/150'}
                   alt={album.name}

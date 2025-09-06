@@ -107,7 +107,7 @@ const Artists: React.FC<ArtistsProps> = ({ viewMode }) => {
         <Grid container spacing={2}>
           {artists.map((artist) => (
             <Grid item xs={6} sm={4} md={3} key={artist.artist_id}>
-              <Card>
+              <Card sx={{ height: '100%', backgroundColor: 'background.card' }}>
                 <img
                   src={artist.images?.[0]?.url || 'https://via.placeholder.com/150'}
                   alt={artist.name}
