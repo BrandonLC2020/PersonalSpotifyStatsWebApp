@@ -24,7 +24,7 @@ const useSpotifyWeb = () => {
 
         if (data.SecretString) {
           const secret = JSON.parse(data.SecretString);
-          const accessToken = secret.spotify_refresh_token; // Assumes your secret has this key
+          const accessToken = secret.spotify_refresh_token;
 
           if (accessToken) {
             const sp = new SpotifyWebApi();

@@ -17,9 +17,9 @@ import AlbumIcon from '@mui/icons-material/Album';
 import ViewListIcon from '@mui/icons-material/ViewList';
 import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import Tracks from './components/Tracks';
-import Artists from './components/Artists';
-import Albums from './components/Albums';
+import Tracks from './components/monthly/MonthlyTopTracks';
+import Artists from './components/monthly/MonthlyTopArtists';
+import Albums from './components/monthly/MonthlyTopAlbums';
 
 // Define a dark theme for the application
 const darkTheme = createTheme({
