@@ -15,6 +15,12 @@ This web application displays your personal Spotify statistics, featuring a Reac
 
 -----
 
+## Demo
+
+You can see screen recordings and screenshots of the app [here](https://brandonlc2020.github.io/Portfolio/project/8).
+
+-----
+
 ## Technologies Used
 
 ### Backend
