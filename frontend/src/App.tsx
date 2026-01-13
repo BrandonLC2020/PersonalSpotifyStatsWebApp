@@ -19,7 +19,11 @@ import PersonIcon from '@mui/icons-material/Person';
 import AlbumIcon from '@mui/icons-material/Album';
 import ViewListIcon from '@mui/icons-material/ViewList';
 import ViewModuleIcon from '@mui/icons-material/ViewModule';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
+import { ThemeProvider } from '@mui/material/styles';
+import { PaletteMode } from '@mui/material';
+import { createCustomTheme } from './theme';
 import MonthlyTopTracks from './components/monthly/MonthlyTopTracks';
 import MonthlyTopArtists from './components/monthly/MonthlyTopArtists';
 import MonthlyTopAlbums from './components/monthly/MonthlyTopAlbums';
@@ -27,30 +31,18 @@ import CurrentTopTracks from './components/current/CurrentTopTracks';
 import CurrentTopArtists from './components/current/CurrentTopArtists';
 import useSpotifyWeb from './hooks/useSpotifyWeb';
 
-const darkTheme = createTheme({
-  palette: {
-    mode: 'dark',
-    primary: {
-      main: '#1DB954', // Spotify Green
-    },
-    background: {
-      default: '#121212',
-      paper: '#1e1e1e',
-      card: '#383838ff',
-    },
-  },
-  typography: {
-    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
-    h4: {
-      fontWeight: 700,
-    },
-  },
-});
+
 
 function App() {
   const [value, setValue] = useState<number>(0);
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [timeRange, setTimeRange] = useState<'current' | 'monthly'>('current');
+  const [mode, setMode] = useState<PaletteMode>('dark');
+  const theme = React.useMemo(() => createCustomTheme(mode), [mode]);
+
+  const toggleColorMode = () => {
+    setMode((prevMode) => (prevMode === 'light' ? 'dark' : 'light'));
+  };
 
   const { spotifyApi, loading: spotifyLoading, error: spotifyError } = useSpotifyWeb();
 
@@ -98,10 +90,15 @@ function App() {
   };
 
   return (
-    <ThemeProvider theme={darkTheme}>
+    <ThemeProvider theme={theme}>
       <CssBaseline />
       <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        <AppBar position="static" color="transparent" elevation={0} sx={{ borderBottom: '1px solid #292929' }}>
+        <AppBar position="static" color="transparent" elevation={0} sx={{
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          backdropFilter: 'blur(10px)',
+          backgroundColor: 'background.glass'
+        }}>
           <Toolbar>
             <MusicNoteIcon sx={{ mr: 2, color: 'primary.main' }} />
             <Typography variant="h6" color="inherit" noWrap sx={{ flexGrow: 1 }}>
@@ -140,6 +137,11 @@ function App() {
         </AppBar>
 
         <Container component="main" sx={{ flexGrow: 1, py: 4 }}>
+          <Box sx={{ textAlign: 'center', mb: 2 }}>
+            <IconButton sx={{ ml: 1 }} onClick={toggleColorMode} color="inherit">
+              {theme.palette.mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+            </IconButton>
+          </Box>
           {renderContent()}
         </Container>
       </Box>

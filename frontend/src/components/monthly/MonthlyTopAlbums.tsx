@@ -20,6 +20,28 @@ import {
   AccordionDetails
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { motion } from 'framer-motion';
+
+const MotionTableRow = motion(TableRow);
+const MotionGrid = motion(Grid);
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1
+  }
+};
 
 interface Image {
   url: string;
@@ -39,7 +61,7 @@ interface GroupedAlbums {
   records: Album[];
 }
 
-const API_URL = 'http://localhost:3001/api/albums';
+const API_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api/albums`;
 
 interface AlbumsProps {
   viewMode: 'table' | 'grid';
@@ -91,7 +113,23 @@ const MonthlyTopAlbums: React.FC<AlbumsProps> = ({ viewMode }) => {
   };
 
   return (
-    <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column', borderRadius: 2 }}>
+    <Paper
+      component={motion.div}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      sx={{
+        p: 2,
+        display: 'flex',
+        flexDirection: 'column',
+        borderRadius: 2,
+        backgroundColor: 'background.glass',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid',
+        borderColor: 'divider',
+        boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)'
+      }}
+    >
       <Typography component="h2" variant="h6" color="primary" gutterBottom>
         Top Albums
       </Typography>
@@ -112,23 +150,40 @@ const MonthlyTopAlbums: React.FC<AlbumsProps> = ({ viewMode }) => {
                       <TableCell>Release Date</TableCell>
                     </TableRow>
                   </TableHead>
-                  <TableBody>
+                  <TableBody component={motion.tbody} variants={containerVariants} initial="hidden" animate="visible">
                     {group.records.map((album, index) => (
-                      <TableRow key={album.album_id} hover>
+                      <MotionTableRow
+                        key={album.album_id}
+                        hover
+                        variants={itemVariants}
+                        whileHover={{ scale: 1.01, backgroundColor: 'rgba(255,255,255,0.05)' }}
+                        transition={{ type: 'spring', stiffness: 300 }}
+                      >
                         <TableCell>{index + 1}</TableCell>
                         <TableCell>{album.name}</TableCell>
                         <TableCell>{album.album_type}</TableCell>
                         <TableCell>{album.release_date}</TableCell>
-                      </TableRow>
+                      </MotionTableRow>
                     ))}
                   </TableBody>
                 </Table>
               </TableContainer>
             ) : (
-              <Grid container spacing={2}>
+              <Grid container spacing={2} component={motion.div} variants={containerVariants} initial="hidden" animate="visible">
                 {group.records.map((album, index) => (
-                  <Grid item xs={6} sm={4} md={3} key={album.album_id}>
-                    <Card sx={{ height: '100%', backgroundColor: 'background.card', position: 'relative' }}>
+                  <MotionGrid item xs={6} sm={4} md={3} key={album.album_id} variants={itemVariants}>
+                    <Card
+                      component={motion.div}
+                      whileHover={{ y: -5, boxShadow: '0 8px 16px rgba(0,0,0,0.2)' }}
+                      sx={{
+                        height: '100%',
+                        backgroundColor: 'background.card',
+                        position: 'relative',
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        backdropFilter: 'blur(5px)'
+                      }}
+                    >
                       <Box
                         sx={{
                           position: 'absolute',
@@ -163,7 +218,7 @@ const MonthlyTopAlbums: React.FC<AlbumsProps> = ({ viewMode }) => {
                         </Typography>
                       </CardContent>
                     </Card>
-                  </Grid>
+                  </MotionGrid>
                 ))}
               </Grid>
             )}

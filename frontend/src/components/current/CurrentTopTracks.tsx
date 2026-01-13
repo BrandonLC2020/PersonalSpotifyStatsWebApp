@@ -14,10 +14,31 @@ import {
   Grid,
   Card,
   CardContent,
-  Link,
-  CardMedia
+  Link
 } from '@mui/material';
 import SpotifyWebApi from 'spotify-web-api-js';
+import { motion } from 'framer-motion';
+
+const MotionTableRow = motion(TableRow);
+const MotionGrid = motion(Grid);
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1
+  }
+};
 
 interface Track {
   id: string;
@@ -78,7 +99,23 @@ const CurrentTopTracks: React.FC<CurrentTracksProps> = ({ viewMode, spotifyApi }
   }
 
   return (
-    <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column', borderRadius: 2 }}>
+    <Paper
+      component={motion.div}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      sx={{
+        p: 2,
+        display: 'flex',
+        flexDirection: 'column',
+        borderRadius: 2,
+        backgroundColor: 'background.glass',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid',
+        borderColor: 'divider',
+        boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)'
+      }}
+    >
       <Typography component="h2" variant="h6" color="primary" gutterBottom>
         Current Top Tracks
       </Typography>
@@ -93,9 +130,15 @@ const CurrentTopTracks: React.FC<CurrentTracksProps> = ({ viewMode, spotifyApi }
                 <TableCell>Album</TableCell>
               </TableRow>
             </TableHead>
-            <TableBody>
+            <TableBody component={motion.tbody} variants={containerVariants} initial="hidden" animate="visible">
               {tracks.map((track, index) => (
-                <TableRow key={track.id} hover>
+                <MotionTableRow
+                  key={track.id}
+                  hover
+                  variants={itemVariants}
+                  whileHover={{ scale: 1.01, backgroundColor: 'rgba(255,255,255,0.05)' }}
+                  transition={{ type: 'spring', stiffness: 300 }}
+                >
                   <TableCell>{index + 1}</TableCell>
                   <TableCell>
                     <Link href={track.external_urls.spotify} target="_blank" rel="noopener noreferrer" color="inherit">
@@ -104,16 +147,27 @@ const CurrentTopTracks: React.FC<CurrentTracksProps> = ({ viewMode, spotifyApi }
                   </TableCell>
                   <TableCell>{track.artists.map(artist => artist.name).join(', ')}</TableCell>
                   <TableCell>{track.album.name}</TableCell>
-                </TableRow>
+                </MotionTableRow>
               ))}
             </TableBody>
           </Table>
         </TableContainer>
       ) : (
-        <Grid container spacing={2}>
+        <Grid container spacing={2} component={motion.div} variants={containerVariants} initial="hidden" animate="visible">
           {tracks.map((track, index) => (
-            <Grid item xs={6} sm={4} md={3} key={track.id}>
-              <Card sx={{ height: '100%', backgroundColor: 'background.card', position: 'relative' }}>
+            <MotionGrid item xs={6} sm={4} md={3} key={track.id} variants={itemVariants}>
+              <Card
+                component={motion.div}
+                whileHover={{ y: -5, boxShadow: '0 8px 16px rgba(0,0,0,0.2)' }}
+                sx={{
+                  height: '100%',
+                  backgroundColor: 'background.card',
+                  position: 'relative',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  backdropFilter: 'blur(5px)'
+                }}
+              >
                 <Box
                   sx={{
                     position: 'absolute',
@@ -153,7 +207,7 @@ const CurrentTopTracks: React.FC<CurrentTracksProps> = ({ viewMode, spotifyApi }
                   </Typography>
                 </CardContent>
               </Card>
-            </Grid>
+            </MotionGrid>
           ))}
         </Grid>
       )}
