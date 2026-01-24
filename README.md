@@ -21,6 +21,34 @@ You can see screen recordings and screenshots of the app [here](https://brandonl
 
 -----
 
+## System Architecture
+
+```mermaid
+graph TD
+    subgraph "User's Browser"
+        A[React Frontend]
+    end
+
+    subgraph "Backend Infrastructure (AWS)"
+        B[Ruby on Rails API]
+        C[MySQL Database on RDS]
+        D[Bastion Host for SSH Tunnel]
+    end
+
+    subgraph "External Services"
+        E[Spotify API]
+        F[AWS Secrets Manager]
+    end
+
+    A -- "API calls for historical stats" --> B
+    A -- "API calls for real-time stats" --> E
+    A -- "Retrieves Spotify API token" --> F
+    B -- "Stores and retrieves<br>historical stats" --> C
+    C -- "Securely accessed via" --> D
+```
+
+-----
+
 ## Technologies Used
 
 ### Backend
@@ -37,6 +65,12 @@ You can see screen recordings and screenshots of the app [here](https://brandonl
   * **Material UI**: A popular React UI framework.
   * **Axios**: A promise-based HTTP client for the browser and Node.js.
   * **Spotify Web API**: Used to fetch real-time user data and album artwork.
+
+### Infrastructure
+
+  * **AWS RDS**: Hosts the MySQL database.
+  * **AWS Secrets Manager**: Securely stores the Spotify API refresh token.
+  * **Bastion Host**: Provides a secure SSH tunnel to the database.
 
 -----
 
