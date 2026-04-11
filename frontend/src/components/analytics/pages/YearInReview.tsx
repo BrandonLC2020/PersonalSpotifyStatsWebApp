@@ -1,352 +1,262 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import {
-  Box, Typography, Paper, CircularProgress, Alert, IconButton
-} from '@mui/material';
-import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
-} from '../charts/TypedRecharts';
-import { useTheme } from '@mui/material/styles';
-import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import SpotifyWebApi from 'spotify-web-api-js';
+import { View, StyleSheet, ScrollView, Dimensions, Image, TouchableOpacity } from 'react-native';
+import { Text, Card, Title, Paragraph, ActivityIndicator, List, useTheme, Button, IconButton, Avatar } from 'react-native-paper';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import useAnalyticsData from '../../../hooks/useAnalyticsData';
-import { getChartStyles, getTooltipStyle, getMonthLabel, CHART_COLORS } from '../../../utils/chartTheme';
+import { CHART_COLORS } from '../../../utils/chartTheme';
 
-interface Props {
-  spotifyApi: SpotifyWebApi.SpotifyWebApiJs;
-}
+const { width } = Dimensions.get('window');
 
-const MotionBox = motion(Box);
+const YearInReview: React.FC = () => {
+    const theme = useTheme();
+    const route = useRoute<any>();
+    const navigation = useNavigation<any>();
+    const year = route.params?.year || new Date().getFullYear();
 
-const Section: React.FC<{ children: React.ReactNode; delay?: number }> = ({ children, delay = 0 }) => (
-  <MotionBox
-    initial={{ opacity: 0, y: 60 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true, amount: 0.3 }}
-    transition={{ duration: 0.8, delay, ease: 'easeOut' }}
-    sx={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', py: 6 }}
-  >
-    {children}
-  </MotionBox>
-);
+    const { tracks, artists, albums, allMonths, loading, error } = useAnalyticsData();
+    const [topArtistImage, setTopArtistImage] = useState<string>('');
 
-const YearInReview: React.FC<Props> = ({ spotifyApi }) => {
-  const theme = useTheme();
-  const mode = theme.palette.mode as 'light' | 'dark';
-  const styles = getChartStyles(mode);
-  const tooltipStyles = getTooltipStyle(mode);
-  const { year: yearParam } = useParams<{ year: string }>();
-  const navigate = useNavigate();
-  const year = parseInt(yearParam || '2025', 10);
+    // Filter data for the selected year
+    const yearTracks = useMemo(() => tracks.filter(g => g.year === year), [tracks, year]);
+    const yearArtists = useMemo(() => artists.filter(g => g.year === year), [artists, year]);
+    const yearAlbums = useMemo(() => albums.filter(g => g.year === year), [albums, year]);
 
-  const { tracks, artists, albums, allMonths, loading, error } = useAnalyticsData();
-  const [topArtistImage, setTopArtistImage] = useState<string>('');
-
-  // Filter data for the selected year
-  const yearTracks = useMemo(() => tracks.filter(g => g.year === year), [tracks, year]);
-  const yearArtists = useMemo(() => artists.filter(g => g.year === year), [artists, year]);
-  const yearAlbums = useMemo(() => albums.filter(g => g.year === year), [albums, year]);
-
-  // Available years
-  const availableYears = useMemo(
-    () => Array.from(new Set(allMonths.map(m => m.year))).sort((a, b) => b - a),
-    [allMonths]
-  );
-
-  // Summary stats
-  const summary = useMemo(() => {
-    // Most appeared track
-    const trackCounts = new Map<string, { name: string; count: number }>();
-    yearTracks.forEach(g => g.records.forEach(t => {
-      const entry = trackCounts.get(t.track_id) || { name: t.name, count: 0 };
-      entry.count++;
-      trackCounts.set(t.track_id, entry);
-    }));
-    const topTrack = trackCounts.size > 0
-      ? Array.from(trackCounts.entries()).sort(([, a], [, b]) => b.count - a.count)[0]
-      : null;
-
-    // Most appeared artist
-    const artistCounts = new Map<string, { name: string; count: number; image?: string }>();
-    yearArtists.forEach(g => g.records.forEach(a => {
-      const entry = artistCounts.get(a.artist_id) || { name: a.name, count: 0, image: a.images?.[0]?.url };
-      entry.count++;
-      artistCounts.set(a.artist_id, entry);
-    }));
-    const topArtist = artistCounts.size > 0
-      ? Array.from(artistCounts.entries()).sort(([, a], [, b]) => b.count - a.count)[0]
-      : null;
-
-    // Most appeared album
-    const albumCounts = new Map<string, { name: string; count: number; image?: string }>();
-    yearAlbums.forEach(g => g.records.forEach(a => {
-      const entry = albumCounts.get(a.album_id) || { name: a.name, count: 0, image: a.images?.[0]?.url };
-      entry.count++;
-      albumCounts.set(a.album_id, entry);
-    }));
-    const topAlbum = albumCounts.size > 0
-      ? Array.from(albumCounts.entries()).sort(([, a], [, b]) => b.count - a.count)[0]
-      : null;
-
-    // Genre cloud
-    const genreCounts = new Map<string, number>();
-    yearArtists.forEach(g => g.records.forEach(a => {
-      const genres = Array.isArray(a.genres) ? a.genres : (() => { try { return JSON.parse(a.genres as string); } catch { return []; } })();
-      genres.forEach((genre: string) => genreCounts.set(genre, (genreCounts.get(genre) || 0) + 1));
-    }));
-    const topGenres = Array.from(genreCounts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 20);
-
-    // Unique counts
-    const uniqueTracks = new Set(yearTracks.flatMap(g => g.records.map(t => t.track_id))).size;
-    const uniqueArtists = new Set(yearArtists.flatMap(g => g.records.map(a => a.artist_id))).size;
-    const uniqueAlbums = new Set(yearAlbums.flatMap(g => g.records.map(a => a.album_id))).size;
-
-    return { topTrack, topArtist, topAlbum, topGenres, uniqueTracks, uniqueArtists, uniqueAlbums };
-  }, [yearTracks, yearArtists, yearAlbums]);
-
-  // Set top artist image
-  useEffect(() => {
-    if (summary.topArtist) {
-      setTopArtistImage(summary.topArtist[1].image || '');
-    }
-  }, [summary]);
-
-
-
-  if (loading) {
-    return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}><CircularProgress size={48} /></Box>;
-  }
-
-  if (error) return <Alert severity="error">{error}</Alert>;
-
-  if (yearTracks.length === 0) {
-    return (
-      <Box sx={{ textAlign: 'center', mt: 8 }}>
-        <Typography variant="h5" color="text.secondary">No data available for {year}</Typography>
-      </Box>
+    // Available years
+    const availableYears = useMemo(
+        () => Array.from(new Set(allMonths.map(m => m.year))).sort((a, b) => b - a),
+        [allMonths]
     );
-  }
 
-  return (
-    <Box>
-      {/* Year navigation */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2, mb: 2 }}>
-        <IconButton
-          onClick={() => navigate(`/analytics/year/${year - 1}`)}
-          disabled={!availableYears.includes(year - 1)}
-          color="primary"
-        >
-          <ArrowBackIcon />
-        </IconButton>
-        <Typography variant="h6" color="text.secondary">{year}</Typography>
-        <IconButton
-          onClick={() => navigate(`/analytics/year/${year + 1}`)}
-          disabled={!availableYears.includes(year + 1)}
-          color="primary"
-        >
-          <ArrowForwardIcon />
-        </IconButton>
-      </Box>
+    // Summary stats
+    const summary = useMemo(() => {
+        const trackCounts = new Map<string, { name: string; count: number }>();
+        yearTracks.forEach(g => g.records.forEach(t => {
+            const entry = trackCounts.get(t.track_id) || { name: t.name, count: 0 };
+            entry.count++;
+            trackCounts.set(t.track_id, entry);
+        }));
+        const topTrack = trackCounts.size > 0
+            ? Array.from(trackCounts.entries()).sort(([, a], [, b]) => b.count - a.count)[0]
+            : null;
 
-      {/* Section 1: Hero */}
-      <Section>
-        <Box sx={{ textAlign: 'center' }}>
-          <MotionBox
-            initial={{ scale: 0.5, opacity: 0 }}
-            whileInView={{ scale: 1, opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 1, ease: 'easeOut' }}
-          >
-            <Typography
-              variant="h1"
-              sx={{
-                fontWeight: 900,
-                fontSize: { xs: '4rem', md: '8rem' },
-                background: 'linear-gradient(135deg, #1DB954 0%, #1ED760 30%, #42A5F5 70%, #9C27B0 100%)',
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                lineHeight: 1.1,
-              }}
-            >
-              {year}
-            </Typography>
-            <Typography variant="h5" color="text.secondary" sx={{ mt: 2 }}>
-              Your Year in Music
-            </Typography>
-          </MotionBox>
-        </Box>
-      </Section>
+        const artistCounts = new Map<string, { name: string; count: number; image?: string }>();
+        yearArtists.forEach(g => g.records.forEach(a => {
+            const entry = artistCounts.get(a.artist_id) || { name: a.name, count: 0, image: a.images?.[0]?.url };
+            entry.count++;
+            artistCounts.set(a.artist_id, entry);
+        }));
+        const topArtist = artistCounts.size > 0
+            ? Array.from(artistCounts.entries()).sort(([, a], [, b]) => b.count - a.count)[0]
+            : null;
 
-      {/* Section 2: Top Artist */}
-      {summary.topArtist && (
-        <Section delay={0.1}>
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="overline" sx={{ color: '#1DB954', letterSpacing: 3 }}>
-              YOUR TOP ARTIST
-            </Typography>
-            {topArtistImage && (
-              <Box
-                component="img"
-                src={topArtistImage}
-                alt={summary.topArtist[1].name}
-                sx={{
-                  width: 200,
-                  height: 200,
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                  mx: 'auto',
-                  my: 3,
-                  border: '3px solid',
-                  borderColor: 'primary.main',
-                  boxShadow: '0 0 40px rgba(29, 185, 84, 0.3)',
-                }}
-              />
+        const albumCounts = new Map<string, { name: string; count: number; image?: string }>();
+        yearAlbums.forEach(g => g.records.forEach(a => {
+            const entry = albumCounts.get(a.album_id) || { name: a.name, count: 0, image: a.images?.[0]?.url };
+            entry.count++;
+            albumCounts.set(a.album_id, entry);
+        }));
+        const topAlbum = albumCounts.size > 0
+            ? Array.from(albumCounts.entries()).sort(([, a], [, b]) => b.count - a.count)[0]
+            : null;
+
+        const genreCounts = new Map<string, number>();
+        yearArtists.forEach(g => g.records.forEach(a => {
+            const genres = Array.isArray(a.genres) ? a.genres : (() => { try { return JSON.parse(a.genres as string); } catch { return []; } })();
+            genres.forEach((genre: string) => genreCounts.set(genre, (genreCounts.get(genre) || 0) + 1));
+        }));
+        const topGenres = Array.from(genreCounts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+        const uniqueTracks = new Set(yearTracks.flatMap(g => g.records.map(t => t.track_id))).size;
+        const uniqueArtists = new Set(yearArtists.flatMap(g => g.records.map(a => a.artist_id))).size;
+        const uniqueAlbums = new Set(yearAlbums.flatMap(g => g.records.map(a => a.album_id))).size;
+
+        return { topTrack, topArtist, topAlbum, topGenres, uniqueTracks, uniqueArtists, uniqueAlbums };
+    }, [yearTracks, yearArtists, yearAlbums]);
+
+    useEffect(() => {
+        if (summary.topArtist) {
+            setTopArtistImage(summary.topArtist[1].image || '');
+        }
+    }, [summary]);
+
+    if (loading) return <ActivityIndicator style={styles.centered} />;
+    if (error) return <View style={styles.centered}><Text style={{ color: theme.colors.error }}>{error}</Text></View>;
+
+    if (yearTracks.length === 0) {
+        return (
+            <View style={styles.centered}>
+                <Text variant="headlineSmall">No data for {year}</Text>
+                <Button mode="contained" onPress={() => navigation.goBack()} style={{ marginTop: 16 }}>Go Back</Button>
+            </View>
+        );
+    }
+
+    return (
+        <ScrollView style={styles.container}>
+            <View style={styles.nav}>
+                <IconButton 
+                    icon="arrow-left" 
+                    disabled={!availableYears.includes(year - 1)} 
+                    onPress={() => navigation.setParams({ year: year - 1 })}
+                />
+                <Text variant="headlineMedium" style={styles.yearTitle}>{year}</Text>
+                <IconButton 
+                    icon="arrow-right" 
+                    disabled={!availableYears.includes(year + 1)} 
+                    onPress={() => navigation.setParams({ year: year + 1 })}
+                />
+            </View>
+
+            <Card style={styles.heroCard}>
+                <Card.Content style={styles.centered}>
+                    <Text variant="headlineLarge" style={styles.heroText}>{year}</Text>
+                    <Text variant="titleMedium">Your Year in Music</Text>
+                </Card.Content>
+            </Card>
+
+            {summary.topArtist && (
+                <Card style={styles.sectionCard}>
+                    <Card.Content style={styles.centered}>
+                        <Text variant="labelLarge" style={styles.sectionLabel}>YOUR TOP ARTIST</Text>
+                        {topArtistImage ? (
+                            <Image source={{ uri: topArtistImage }} style={styles.topArtistImage} />
+                        ) : (
+                            <Avatar.Icon size={120} icon="account" style={styles.artistPlaceholder} />
+                        )}
+                        <Text variant="headlineMedium" style={styles.artistName}>{summary.topArtist[1].name}</Text>
+                        <Text variant="bodyMedium">In your top list for {summary.topArtist[1].count} months</Text>
+                    </Card.Content>
+                </Card>
             )}
-            <Typography variant="h3" sx={{ fontWeight: 700 }}>
-              {summary.topArtist[1].name}
-            </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
-              Appeared in your top list for <strong>{summary.topArtist[1].count}</strong> months
-            </Typography>
-          </Box>
-        </Section>
-      )}
 
-      {/* Section 3: Top Track */}
-      {summary.topTrack && (
-        <Section delay={0.1}>
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="overline" sx={{ color: '#1DB954', letterSpacing: 3 }}>
-              YOUR TOP TRACK
-            </Typography>
-            <Typography variant="h3" sx={{ fontWeight: 700, mt: 2 }}>
-              🎵 {summary.topTrack[1].name}
-            </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
-              In your top tracks for <strong>{summary.topTrack[1].count}</strong> months this year
-            </Typography>
-          </Box>
-        </Section>
-      )}
+            {summary.topTrack && (
+                <Card style={styles.sectionCard}>
+                   <Card.Content style={styles.centered}>
+                        <Text variant="labelLarge" style={styles.sectionLabel}>YOUR TOP TRACK</Text>
+                        <View style={styles.trackHero}>
+                            <Text variant="headlineSmall" style={styles.trackName}>🎵 {summary.topTrack[1].name}</Text>
+                            <Text variant="bodyMedium">Featured in {summary.topTrack[1].count} months this year</Text>
+                        </View>
+                    </Card.Content>
+                </Card>
+            )}
 
-      {/* Section 4: Genre Cloud */}
-      {summary.topGenres.length > 0 && (
-        <Section delay={0.1}>
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="overline" sx={{ color: '#1DB954', letterSpacing: 3 }}>
-              YOUR SOUND
-            </Typography>
-            <Typography variant="h4" sx={{ fontWeight: 700, mt: 1, mb: 3 }}>
-              Genre Cloud
-            </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 1.5, maxWidth: 600, mx: 'auto' }}>
-              {summary.topGenres.map(([genre, count], i) => (
-                <MotionBox
-                  key={genre}
-                  initial={{ scale: 0 }}
-                  whileInView={{ scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.05 }}
-                >
-                  <Paper sx={{
-                    px: 2,
-                    py: 0.8,
-                    borderRadius: 4,
-                    backgroundColor: `${CHART_COLORS[i % CHART_COLORS.length]}20`,
-                    border: `1px solid ${CHART_COLORS[i % CHART_COLORS.length]}40`,
-                    fontSize: Math.max(11, Math.min(18, 10 + count * 1.5)),
-                    fontWeight: 500,
-                    color: CHART_COLORS[i % CHART_COLORS.length],
-                  }}>
-                    {genre}
-                  </Paper>
-                </MotionBox>
-              ))}
-            </Box>
-          </Box>
-        </Section>
-      )}
+            <Card style={styles.sectionCard}>
+                <Card.Title title="By the Numbers" />
+                <Card.Content style={styles.statsGrid}>
+                    <View style={styles.statBox}>
+                        <Text variant="headlineMedium" style={styles.statValue}>{summary.uniqueTracks}</Text>
+                        <Text variant="labelSmall">Tracks</Text>
+                    </View>
+                    <View style={styles.statBox}>
+                        <Text variant="headlineMedium" style={styles.statValue}>{summary.uniqueArtists}</Text>
+                        <Text variant="labelSmall">Artists</Text>
+                    </View>
+                    <View style={styles.statBox}>
+                        <Text variant="headlineMedium" style={styles.statValue}>{summary.uniqueAlbums}</Text>
+                        <Text variant="labelSmall">Albums</Text>
+                    </View>
+                    <View style={styles.statBox}>
+                        <Text variant="headlineMedium" style={styles.statValue}>{summary.topGenres.length}</Text>
+                        <Text variant="labelSmall">Genres</Text>
+                    </View>
+                </Card.Content>
+            </Card>
 
-
-
-      {/* Section 6: By the Numbers */}
-      <Section delay={0.1}>
-        <Box sx={{ textAlign: 'center' }}>
-          <Typography variant="overline" sx={{ color: '#1DB954', letterSpacing: 3 }}>
-            BY THE NUMBERS
-          </Typography>
-          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 6, mt: 4, flexWrap: 'wrap' }}>
-            {[
-              { label: 'Unique Tracks', value: summary.uniqueTracks, emoji: '🎵' },
-              { label: 'Unique Artists', value: summary.uniqueArtists, emoji: '🎤' },
-              { label: 'Unique Albums', value: summary.uniqueAlbums, emoji: '💿' },
-              { label: 'Genres', value: summary.topGenres.length, emoji: '🎼' },
-            ].map(s => (
-              <MotionBox
-                key={s.label}
-                initial={{ scale: 0 }}
-                whileInView={{ scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ type: 'spring', stiffness: 200 }}
-                sx={{ textAlign: 'center' }}
-              >
-                <Typography variant="h3">{s.emoji}</Typography>
-                <Typography
-                  variant="h3"
-                  sx={{
-                    fontWeight: 800,
-                    background: 'linear-gradient(135deg, #1DB954, #1ED760)',
-                    backgroundClip: 'text',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                  }}
-                >
-                  {s.value}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">{s.label}</Typography>
-              </MotionBox>
-            ))}
-          </Box>
-        </Box>
-      </Section>
-
-
-
-      {/* Outro */}
-      <Section>
-        <Box sx={{ textAlign: 'center' }}>
-          <Typography variant="h4" sx={{ fontWeight: 700, mb: 2, color: 'text.secondary' }}>
-            That was your {year} 🎉
-          </Typography>
-          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 3 }}>
-            {availableYears
-              .filter(y => y !== year)
-              .slice(0, 3)
-              .map(y => (
-                <Paper
-                  key={y}
-                  component={motion.div}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => navigate(`/analytics/year/${y}`)}
-                  sx={{
-                    px: 3, py: 1.5, cursor: 'pointer',
-                    borderRadius: 2,
-                    backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-                    '&:hover': { backgroundColor: mode === 'dark' ? 'rgba(29, 185, 84, 0.1)' : 'rgba(29, 185, 84, 0.05)' },
-                  }}
-                >
-                  <Typography variant="body1" sx={{ fontWeight: 600 }}>See {y}</Typography>
-                </Paper>
-              ))}
-          </Box>
-        </Box>
-      </Section>
-    </Box>
-  );
+            <View style={styles.footer}>
+                <Text variant="titleMedium" style={styles.footerText}>That was your {year} 🎉</Text>
+            </View>
+        </ScrollView>
+    );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 16,
+  },
+  centered: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  yearTitle: {
+    fontWeight: 'bold',
+    marginHorizontal: 16,
+  },
+  heroCard: {
+    marginBottom: 16,
+    paddingVertical: 32,
+    backgroundColor: 'rgba(29, 185, 84, 0.1)',
+    borderRadius: 16,
+  },
+  heroText: {
+    fontWeight: '900',
+    fontSize: 64,
+    color: '#1DB954',
+  },
+  sectionCard: {
+    marginBottom: 16,
+    borderRadius: 16,
+    paddingVertical: 16,
+  },
+  sectionLabel: {
+    color: '#1DB954',
+    letterSpacing: 2,
+    marginBottom: 16,
+  },
+  topArtistImage: {
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    marginBottom: 16,
+    borderWidth: 3,
+    borderColor: '#1DB954',
+  },
+  artistPlaceholder: {
+      marginBottom: 16,
+  },
+  artistName: {
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  trackHero: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  trackName: {
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  statBox: {
+    width: '48%',
+    alignItems: 'center',
+    paddingVertical: 12,
+    marginBottom: 12,
+  },
+  statValue: {
+    fontWeight: 'bold',
+    color: '#1DB954',
+  },
+  footer: {
+    paddingVertical: 48,
+    alignItems: 'center',
+  },
+  footerText: {
+    opacity: 0.6,
+  }
+});
 
 export default YearInReview;

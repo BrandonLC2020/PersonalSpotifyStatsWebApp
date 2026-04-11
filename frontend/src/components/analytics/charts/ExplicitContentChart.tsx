@@ -1,12 +1,11 @@
 import React, { useMemo } from 'react';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Line, ComposedChart
-} from './TypedRecharts';
-import { Box } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
+import { View, StyleSheet, Dimensions } from 'react-native';
+import { useTheme, Text } from 'react-native-paper';
+import { VictoryChart, VictoryBar, VictoryLine, VictoryAxis, VictoryTheme, VictoryLegend, VictoryStack, VictoryVoronoiContainer, VictoryTooltip } from 'victory-native';
 import { GroupedRecords, Track } from '../../../types';
 import { computeExplicitRatio } from '../../../utils/analyticsUtils';
-import { getChartStyles, getTooltipStyle } from '../../../utils/chartTheme';
+
+const { width } = Dimensions.get('window');
 
 interface Props {
   tracks: GroupedRecords<Track>[];
@@ -14,93 +13,120 @@ interface Props {
 
 const ExplicitContentChart: React.FC<Props> = ({ tracks }) => {
   const theme = useTheme();
-  const mode = theme.palette.mode as 'light' | 'dark';
-  const styles = getChartStyles(mode);
-  const tooltipStyles = getTooltipStyle(mode);
 
   const data = useMemo(() => computeExplicitRatio(tracks), [tracks]);
 
   if (data.length === 0) {
-    return <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>No explicit data available</Box>;
+    return (
+      <View style={styles.centered}>
+        <Text variant="bodyMedium">No explicit data available</Text>
+      </View>
+    );
   }
 
   return (
-    <Box>
-      <ResponsiveContainer width="100%" height={300}>
-        <ComposedChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke={styles.gridColor} />
-          <XAxis
-            dataKey="month"
-            tick={{ fill: styles.axisColor, fontSize: 11 }}
-            angle={-45}
-            textAnchor="end"
-            height={60}
+    <View style={styles.container}>
+      <VictoryChart
+        theme={VictoryTheme.material}
+        width={width - 32}
+        height={300}
+        padding={{ top: 20, bottom: 50, left: 50, right: 50 }}
+        containerComponent={
+          <VictoryVoronoiContainer
+            labels={({ datum }) => `${datum.childName}: ${datum.y}${datum.childName === 'Explicit %' ? '%' : ''}`}
+            labelComponent={<VictoryTooltip />}
           />
-          <YAxis
-            yAxisId="counts"
-            tick={{ fill: styles.axisColor, fontSize: 12 }}
-            label={{
-              value: 'Track Count',
-              angle: -90,
-              position: 'insideLeft',
-              fill: styles.axisColor,
-              fontSize: 12,
-            }}
-          />
-          <YAxis
-            yAxisId="percent"
-            orientation="right"
-            domain={[0, 100]}
-            tick={{ fill: '#FF9800', fontSize: 12 }}
-            tickFormatter={(v: number) => `${v}%`}
-            label={{
-              value: 'Explicit %',
-              angle: 90,
-              position: 'insideRight',
-              fill: '#FF9800',
-              fontSize: 12,
-            }}
-          />
-          <Tooltip
-            contentStyle={tooltipStyles.contentStyle}
-            labelStyle={tooltipStyles.labelStyle}
-            formatter={(value: number, name: string) => {
-              if (name === 'Explicit %') return [`${value}%`, name];
-              return [value, name];
-            }}
-          />
-          <Legend wrapperStyle={{ fontSize: '11px' }} />
-          <Bar
-            yAxisId="counts"
-            dataKey="explicit"
-            stackId="a"
-            fill="#E91E63"
+        }
+      >
+        <VictoryAxis
+          style={{
+            tickLabels: { fontSize: 8, padding: 5, fill: theme.colors.onSurfaceVariant },
+          }}
+          fixLabelOverlap
+        />
+        <VictoryAxis
+          dependentAxis
+          style={{
+            tickLabels: { fontSize: 10, fill: theme.colors.onSurfaceVariant },
+            axisLabel: { fontSize: 10, padding: 30, fill: theme.colors.onSurfaceVariant }
+          }}
+          label="Track Count"
+        />
+        
+        <VictoryStack colorScale={["#E91E63", "#42A5F5"]}>
+          <VictoryBar
             name="Explicit"
-            radius={[0, 0, 0, 0]}
-            opacity={0.85}
+            data={data.map(d => ({ x: d.month, y: d.explicit }))}
           />
-          <Bar
-            yAxisId="counts"
-            dataKey="clean"
-            stackId="a"
-            fill="#42A5F5"
+          <VictoryBar
             name="Clean"
-            radius={[4, 4, 0, 0]}
-            opacity={0.85}
+            data={data.map(d => ({ x: d.month, y: d.clean }))}
           />
-          <Line
-            yAxisId="percent"
-            type="monotone"
-            dataKey="explicitPercent"
-            stroke="#FF9800"
-            strokeWidth={2.5}
-            name="Explicit %"
-            dot={{ r: 3, fill: '#FF9800' }}
-          />
-        </ComposedChart>
-      </ResponsiveContainer>
-    </Box>
+        </VictoryStack>
+
+        <VictoryAxis
+          dependentAxis
+          orientation="right"
+          domain={[0, 100]}
+          style={{
+            tickLabels: { fontSize: 10, fill: "#FF9800" },
+            axisLabel: { fontSize: 10, padding: 35, fill: "#FF9800" }
+          }}
+          label="Explicit %"
+        />
+        
+        <VictoryLine
+          name="Explicit %"
+          data={data.map(d => ({ x: d.month, y: d.explicitPercent }))}
+          style={{
+            data: { stroke: "#FF9800", strokeWidth: 2 }
+          }}
+        />
+      </VictoryChart>
+      
+      <View style={styles.legendContainer}>
+        <View style={styles.legendItem}>
+          <View style={[styles.colorDot, { backgroundColor: "#E91E63" }]} />
+          <Text variant="labelSmall">Explicit</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={[styles.colorDot, { backgroundColor: "#42A5F5" }]} />
+          <Text variant="labelSmall">Clean</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={[styles.colorDot, { backgroundColor: "#FF9800" }]} />
+          <Text variant="labelSmall">Explicit %</Text>
+        </View>
+      </View>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    padding: 8,
+  },
+  centered: {
+    height: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  legendContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 8,
+  },
+  colorDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 4,
+  },
+});
 
 export default ExplicitContentChart;

@@ -1,20 +1,16 @@
 import React, { useMemo } from 'react';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
-} from './TypedRecharts';
-import { Box, Typography, CircularProgress, Alert } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
+import { View, StyleSheet, Dimensions } from 'react-native';
+import { useTheme, Text, ActivityIndicator } from 'react-native-paper';
+import { VictoryChart, VictoryBar, VictoryAxis, VictoryTheme, VictoryTooltip, VictoryVoronoiContainer } from 'victory-native';
 import { useAlbumConcentration } from '../../../hooks/useAnalyticsApi';
-import { getChartStyles, getTooltipStyle, CHART_COLORS } from '../../../utils/chartTheme';
+import { CHART_COLORS } from '../../../utils/chartTheme';
+
+const { width } = Dimensions.get('window');
 
 const AlbumConcentrationChart: React.FC = () => {
   const theme = useTheme();
-  const mode = theme.palette.mode as 'light' | 'dark';
-  const styles = getChartStyles(mode);
-  const tooltipStyles = getTooltipStyle(mode);
   const { data, loading, error } = useAlbumConcentration();
 
-  // Aggregate by album across all time for a "sticky albums" view
   const aggregateData = useMemo(() => {
     if (!data) return [];
     const totals = new Map<string, { name: string; count: number; type: string }>();
@@ -29,42 +25,65 @@ const AlbumConcentrationChart: React.FC = () => {
 
     return Array.from(totals.values())
       .sort((a, b) => b.count - a.count)
-      .slice(0, 15);
+      .slice(0, 10); // Limit to top 10 for mobile
   }, [data]);
 
-  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>;
-  if (error) return <Alert severity="error">{error}</Alert>;
+  if (loading) return <View style={styles.centered}><ActivityIndicator /></View>;
+  if (error) return <View style={styles.centered}><Text style={{ color: theme.colors.error }}>{error}</Text></View>;
   if (!data || data.length === 0) return null;
 
   return (
-    <Box>
-      <ResponsiveContainer width="100%" height={350}>
-        <BarChart 
-          data={aggregateData} 
-          layout="vertical"
-          margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" stroke={styles.gridColor} horizontal={true} vertical={false} />
-          <XAxis type="number" tick={{ fill: styles.axisColor, fontSize: 11 }} />
-          <YAxis 
-            dataKey="name" 
-            type="category" 
-            tick={{ fill: styles.axisColor, fontSize: 11 }}
-            width={90}
+    <View style={styles.container}>
+      <VictoryChart
+        theme={VictoryTheme.material}
+        width={width - 32}
+        height={350}
+        padding={{ top: 20, bottom: 50, left: 100, right: 30 }}
+        containerComponent={
+          <VictoryVoronoiContainer
+            labels={({ datum }) => `${datum.name}: ${datum.count}`}
+            labelComponent={<VictoryTooltip />}
           />
-          <Tooltip
-            contentStyle={tooltipStyles.contentStyle}
-            labelStyle={tooltipStyles.labelStyle}
-          />
-          <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-            {aggregateData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-    </Box>
+        }
+      >
+        <VictoryAxis
+          style={{
+            tickLabels: { fontSize: 8, padding: 5, fill: theme.colors.onSurfaceVariant },
+          }}
+        />
+        <VictoryAxis
+          dependentAxis
+          invertAxis
+          style={{
+            tickLabels: { fontSize: 8, fill: theme.colors.onSurfaceVariant },
+          }}
+        />
+        <VictoryBar
+          horizontal
+          data={aggregateData}
+          x="name"
+          y="count"
+          style={{
+            data: {
+              fill: ({ index }) => CHART_COLORS[Number(index) % CHART_COLORS.length],
+              width: 15
+            }
+          }}
+        />
+      </VictoryChart>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    padding: 8,
+  },
+  centered: {
+    height: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});
 
 export default AlbumConcentrationChart;

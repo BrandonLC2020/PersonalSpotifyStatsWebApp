@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, Dimensions } from 'react-native';
-import { Text, Card, Title, Paragraph, ActivityIndicator, List, useTheme, Button } from 'react-native-paper';
+import { View, StyleSheet, ScrollView } from 'react-native';
+import { Text, Card, ActivityIndicator, useTheme } from 'react-native-paper';
 import useAnalyticsData from '../../hooks/useAnalyticsData';
-import { VictoryPie, VictoryChart, VictoryBar, VictoryTheme } from 'victory-native';
-
-const { width } = Dimensions.get('window');
+import RankingMovementChart from './charts/RankingMovementChart';
+import GenreDiversityChart from './charts/GenreDiversityChart';
+import ExplicitContentChart from './charts/ExplicitContentChart';
+import ArtistDominanceChart from './charts/ArtistDominanceChart';
 
 const AnalyticsDashboard = () => {
   const { tracks, artists, allMonths, loading, error } = useAnalyticsData();
@@ -22,7 +23,6 @@ const AnalyticsDashboard = () => {
     );
   }
 
-  // Example stats
   const totalMonths = allMonths.length;
   const uniqueTracks = new Set(tracks.flatMap(g => g.records.map(r => r.track_id))).size;
   const uniqueArtists = new Set(artists.flatMap(g => g.records.map(r => r.artist_id))).size;
@@ -30,7 +30,7 @@ const AnalyticsDashboard = () => {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text variant="headlineLarge" style={styles.title}>Listening Analytics</Text>
+        <Text variant="headlineLarge" style={styles.title}>Your Stats</Text>
         <Text variant="bodyMedium" style={styles.subtitle}>
           Deep insights into your music taste across {totalMonths} months of data
         </Text>
@@ -39,48 +39,50 @@ const AnalyticsDashboard = () => {
       <View style={styles.statsRow}>
         <Card style={styles.statCard}>
           <Card.Content>
-            <Title>{uniqueTracks}</Title>
-            <Paragraph>Tracks</Paragraph>
+            <Text variant="headlineMedium" style={styles.statValue}>{uniqueTracks}</Text>
+            <Text variant="bodySmall">Tracks</Text>
           </Card.Content>
         </Card>
         <Card style={styles.statCard}>
           <Card.Content>
-            <Title>{uniqueArtists}</Title>
-            <Paragraph>Artists</Paragraph>
+            <Text variant="headlineMedium" style={styles.statValue}>{uniqueArtists}</Text>
+            <Text variant="bodySmall">Artists</Text>
           </Card.Content>
         </Card>
       </View>
 
       <Card style={styles.chartCard}>
-        <Card.Title title="Project Status" subtitle="Web to Mobile Migration" />
+        <Card.Title title="Ranking Movement" subtitle="Top track and artist history" />
         <Card.Content>
-          <Text variant="bodySmall">
-            The analytics dashboard is being migrated. Basic stats are available, and charts are being re-implemented using Victory Native.
-          </Text>
+            <RankingMovementChart tracks={tracks} artists={artists} />
         </Card.Content>
       </Card>
 
-      {/* Simple Victory Pie Placeholder */}
-      <View style={styles.chartContainer}>
-        <Text variant="titleMedium" style={styles.chartTitle}>Explicit Content Ratio (Sample)</Text>
-        <VictoryPie
-          data={[
-            { x: "Explicit", y: 35 },
-            { x: "Clean", y: 65 },
-          ]}
-          colorScale={["#1DB954", "#535353"]}
-          width={width - 48}
-          height={250}
-          innerRadius={50}
-          labelRadius={70}
-          style={{ labels: { fill: "white", fontSize: 12 } }}
-        />
-      </View>
+      <Card style={styles.chartCard}>
+        <Card.Title title="Explicit Content" subtitle="Ratio of explicit vs clean tracks" />
+        <Card.Content>
+            <ExplicitContentChart tracks={tracks} />
+        </Card.Content>
+      </Card>
+
+      <Card style={styles.chartCard}>
+        <Card.Title title="Genre Diversity" subtitle="Distribution of your music taste" />
+        <Card.Content>
+            <GenreDiversityChart artists={artists} />
+        </Card.Content>
+      </Card>
+
+      <Card style={styles.chartCard}>
+        <Card.Title title="Artist Dominance" subtitle="Share of top tracks by artist" />
+        <Card.Content>
+            <ArtistDominanceChart />
+        </Card.Content>
+      </Card>
 
       <View style={styles.footer}>
-        <Button mode="outlined" onPress={() => console.log('Time Machine')}>
-          Time Machine
-        </Button>
+        <Text variant="labelSmall" style={styles.footerText}>
+            Personal Spotify Stats &copy; {new Date().getFullYear()}
+        </Text>
       </View>
     </ScrollView>
   );
@@ -115,23 +117,22 @@ const styles = StyleSheet.create({
     width: '48%',
     borderRadius: 12,
   },
+  statValue: {
+    fontWeight: 'bold',
+    color: '#1DB954',
+  },
   chartCard: {
     marginHorizontal: 16,
     marginBottom: 16,
-    borderRadius: 12,
-  },
-  chartContainer: {
-    alignItems: 'center',
-    padding: 16,
-  },
-  chartTitle: {
-    alignSelf: 'flex-start',
-    marginBottom: 16,
-    fontWeight: 'bold',
+    borderRadius: 16,
+    elevation: 2,
   },
   footer: {
-    padding: 24,
+    padding: 32,
     alignItems: 'center',
+  },
+  footerText: {
+    opacity: 0.5,
   },
 });
 

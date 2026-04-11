@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
-import { Box, ToggleButton, ToggleButtonGroup, Tooltip as MuiTooltip, Typography } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
+import { View, StyleSheet, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
+import { useTheme, Text, SegmentedButtons, Tooltip } from 'react-native-paper';
 import { GroupedRecords, Track, Artist } from '../../../types';
 import { computePopularityHeatmap } from '../../../utils/analyticsUtils';
-import { getMonthLabel } from '../../../utils/chartTheme';
+
+const { width } = Dimensions.get('window');
 
 interface Props {
   tracks: GroupedRecords<Track>[];
@@ -12,7 +13,6 @@ interface Props {
 
 const PopularityHeatmap: React.FC<Props> = ({ tracks, artists }) => {
   const theme = useTheme();
-  const mode = theme.palette.mode;
   const [entityType, setEntityType] = useState<'tracks' | 'artists'>('tracks');
 
   const source = entityType === 'tracks' ? tracks : artists;
@@ -24,8 +24,7 @@ const PopularityHeatmap: React.FC<Props> = ({ tracks, artists }) => {
   }, [source]);
 
   const getColor = (popularity: number): string => {
-    // Gradient from cool purple (low) → green (mid) → yellow (high)
-    if (popularity === 0) return mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)';
+    if (popularity === 0) return theme.dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
     const normalized = popularity / 100;
     if (normalized < 0.33) {
       return `rgba(156, 39, 176, ${0.2 + normalized * 1.5})`;
@@ -36,106 +35,136 @@ const PopularityHeatmap: React.FC<Props> = ({ tracks, artists }) => {
     }
   };
 
-  const handleEntityTypeChange = (
-    _event: React.MouseEvent<HTMLElement>,
-    newType: 'tracks' | 'artists' | null,
-  ) => {
-    if (newType !== null) setEntityType(newType);
-  };
-
   if (months.length === 0) {
-    return <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>No heatmap data available</Box>;
+    return (
+      <View style={styles.centered}>
+        <Text variant="bodyMedium">No heatmap data available</Text>
+      </View>
+    );
   }
 
-  const cellSize = Math.min(50, Math.max(28, 600 / months.length));
+  const cellSize = 36;
 
   return (
-    <Box>
-      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'center' }}>
-        <ToggleButtonGroup value={entityType} exclusive onChange={handleEntityTypeChange} size="small">
-          <ToggleButton value="tracks">Tracks</ToggleButton>
-          <ToggleButton value="artists">Artists</ToggleButton>
-        </ToggleButtonGroup>
-      </Box>
+    <View style={styles.container}>
+      <SegmentedButtons
+        value={entityType}
+        onValueChange={value => setEntityType(value as 'tracks' | 'artists')}
+        buttons={[
+          { value: 'tracks', label: 'Tracks' },
+          { value: 'artists', label: 'Artists' },
+        ]}
+        style={styles.toggle}
+      />
 
-      <Box sx={{ overflowX: 'auto', pb: 1 }}>
-        <Box sx={{ display: 'inline-flex', flexDirection: 'column', gap: '2px' }}>
-          {/* Header row */}
-          <Box sx={{ display: 'flex', gap: '2px', ml: `${cellSize}px` }}>
+      <ScrollView horizontal bounces={false}>
+        <View style={styles.heatmapContainer}>
+          {/* Header row labels */}
+          <View style={[styles.row, { marginLeft: 40 }]}>
             {months.map(month => (
-              <Box
-                key={month}
-                sx={{
-                  width: cellSize,
-                  textAlign: 'center',
-                  fontSize: 9,
-                  color: 'text.secondary',
-                  transform: 'rotate(-45deg)',
-                  transformOrigin: 'bottom left',
-                  height: 40,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {month}
-              </Box>
+              <View key={month} style={[styles.headerCell, { width: cellSize }]}>
+                <Text style={styles.headerText} numberOfLines={1}>{month.split(' ')[0]}</Text>
+              </View>
             ))}
-          </Box>
+          </View>
 
           {/* Data rows */}
           {Array.from({ length: maxStanding }, (_, i) => i + 1).map(standing => (
-            <Box key={standing} sx={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
-              <Box sx={{ width: cellSize, textAlign: 'right', pr: 1, fontSize: 11, color: 'text.secondary' }}>
-                #{standing}
-              </Box>
+            <View key={standing} style={styles.row}>
+              <View style={styles.standingLabel}>
+                <Text variant="labelSmall">#{standing}</Text>
+              </View>
               {months.map(month => {
                 const cell = cells.find(c => c.month === month && c.standing === standing);
                 return (
-                  <MuiTooltip
-                    key={`${month}-${standing}`}
-                    title={cell
-                      ? `${cell.name} — Popularity: ${cell.popularity}`
-                      : 'No data'
-                    }
-                    arrow
-                    placement="top"
-                  >
-                    <Box
-                      sx={{
-                        width: cellSize,
-                        height: cellSize * 0.7,
-                        backgroundColor: cell ? getColor(cell.popularity) : (mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'),
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        transition: 'transform 0.15s, box-shadow 0.15s',
-                        border: '1px solid',
-                        borderColor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-                        '&:hover': {
-                          transform: 'scale(1.15)',
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                          zIndex: 10,
-                        },
-                      }}
+                  <Tooltip key={`${month}-${standing}`} title={cell ? `${cell.name} (${cell.popularity})` : 'No data'}>
+                    <View
+                        style={[
+                            styles.cell,
+                            {
+                                width: cellSize - 4,
+                                height: cellSize - 4,
+                                backgroundColor: cell ? getColor(cell.popularity) : (theme.dark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)')
+                            }
+                        ]}
                     />
-                  </MuiTooltip>
+                  </Tooltip>
                 );
               })}
-            </Box>
+            </View>
           ))}
-        </Box>
+        </View>
+      </ScrollView>
 
-        {/* Legend */}
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mt: 2, gap: 1 }}>
-          <Typography variant="caption" color="text.secondary">Low</Typography>
-          <Box sx={{ display: 'flex', gap: '1px' }}>
-            {[10, 25, 40, 55, 70, 85, 100].map(v => (
-              <Box key={v} sx={{ width: 20, height: 12, backgroundColor: getColor(v), borderRadius: '2px' }} />
-            ))}
-          </Box>
-          <Typography variant="caption" color="text.secondary">High Popularity</Typography>
-        </Box>
-      </Box>
-    </Box>
+      {/* Legend */}
+      <View style={styles.legend}>
+        <Text variant="labelSmall">Low</Text>
+        <View style={styles.legendGradient}>
+          {[10, 40, 70, 100].map(v => (
+            <View key={v} style={[styles.legendStep, { backgroundColor: getColor(v) }]} />
+          ))}
+        </View>
+        <Text variant="labelSmall">High</Text>
+      </View>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    padding: 8,
+  },
+  toggle: {
+    marginBottom: 16,
+    marginHorizontal: 16,
+  },
+  centered: {
+    height: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  heatmapContainer: {
+    paddingRight: 16,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  standingLabel: {
+    width: 40,
+    alignItems: 'flex-end',
+    paddingRight: 8,
+  },
+  headerCell: {
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerText: {
+    fontSize: 8,
+    opacity: 0.6,
+  },
+  cell: {
+    borderRadius: 4,
+    margin: 1,
+  },
+  legend: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    gap: 8,
+  },
+  legendGradient: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  legendStep: {
+    width: 20,
+    height: 10,
+    borderRadius: 2,
+  },
+});
 
 export default PopularityHeatmap;

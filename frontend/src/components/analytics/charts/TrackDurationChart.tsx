@@ -1,12 +1,11 @@
 import React, { useMemo } from 'react';
-import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine
-} from './TypedRecharts';
-import { Box, Typography } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
+import { View, StyleSheet, Dimensions } from 'react-native';
+import { useTheme, Text } from 'react-native-paper';
+import { VictoryChart, VictoryArea, VictoryAxis, VictoryTheme, VictoryTooltip, VictoryVoronoiContainer, VictoryLine } from 'victory-native';
 import { GroupedRecords, Track } from '../../../types';
 import { computeAvgDuration } from '../../../utils/analyticsUtils';
-import { getChartStyles, getTooltipStyle, formatDuration } from '../../../utils/chartTheme';
+
+const { width } = Dimensions.get('window');
 
 interface Props {
   tracks: GroupedRecords<Track>[];
@@ -14,9 +13,6 @@ interface Props {
 
 const TrackDurationChart: React.FC<Props> = ({ tracks }) => {
   const theme = useTheme();
-  const mode = theme.palette.mode as 'light' | 'dark';
-  const styles = getChartStyles(mode);
-  const tooltipStyles = getTooltipStyle(mode);
 
   const data = useMemo(() => computeAvgDuration(tracks), [tracks]);
 
@@ -26,87 +22,96 @@ const TrackDurationChart: React.FC<Props> = ({ tracks }) => {
     return validPoints.reduce((sum, d) => sum + d.avgDurationMs, 0) / validPoints.length;
   }, [data]);
 
-  if (data.length === 0) {
-    return <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>No duration data available</Box>;
-  }
-
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (!active || !payload?.length) return null;
-    const d = payload[0].payload;
-    return (
-      <Box sx={{
-        ...tooltipStyles.contentStyle,
-        p: 1.5,
-      }}>
-        <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>{label}</Typography>
-        <Typography variant="body2">
-          Avg Duration: <strong>{d.avgDurationFormatted}</strong>
-        </Typography>
-        <Typography variant="caption" color="text.secondary">
-          {d.trackCount} tracks
-        </Typography>
-      </Box>
-    );
+  const formatDuration = (ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, gap: 2 }}>
-        <Box sx={{ textAlign: 'center' }}>
-          <Typography variant="caption" color="text.secondary">Overall Average</Typography>
-          <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
-            {formatDuration(overallAvg)}
-          </Typography>
-        </Box>
-      </Box>
+  if (data.length === 0) {
+    return (
+      <View style={styles.centered}>
+        <Text variant="bodyMedium">No duration data available</Text>
+      </View>
+    );
+  }
 
-      <ResponsiveContainer width="100%" height={300}>
-        <AreaChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-          <defs>
-            <linearGradient id="durationGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#1DB954" stopOpacity={0.4} />
-              <stop offset="95%" stopColor="#1DB954" stopOpacity={0.02} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke={styles.gridColor} />
-          <XAxis
-            dataKey="month"
-            tick={{ fill: styles.axisColor, fontSize: 11 }}
-            angle={-45}
-            textAnchor="end"
-            height={60}
+  return (
+    <View style={styles.container}>
+      <View style={styles.summaryContainer}>
+        <Text variant="labelSmall" style={styles.summaryLabel}>Overall Average</Text>
+        <Text variant="headlineSmall" style={styles.summaryValue}>
+          {formatDuration(overallAvg)}
+        </Text>
+      </View>
+
+      <VictoryChart
+        theme={VictoryTheme.material}
+        width={width - 32}
+        height={300}
+        padding={{ top: 20, bottom: 50, left: 50, right: 30 }}
+        containerComponent={
+          <VictoryVoronoiContainer
+            labels={({ datum }) => `${datum.x}: ${datum.label}`}
+            labelComponent={<VictoryTooltip />}
           />
-          <YAxis
-            tickFormatter={(value: number) => formatDuration(value)}
-            tick={{ fill: styles.axisColor, fontSize: 12 }}
-            domain={['auto', 'auto']}
-          />
-          <Tooltip content={<CustomTooltip />} />
-          <ReferenceLine
-            y={overallAvg}
-            stroke="#FF9800"
-            strokeDasharray="5 5"
-            strokeWidth={1.5}
-            label={{
-              value: `Avg: ${formatDuration(overallAvg)}`,
-              fill: '#FF9800',
-              fontSize: 11,
-              position: 'right',
+        }
+      >
+        <VictoryAxis
+          style={{
+            tickLabels: { fontSize: 8, padding: 5, fill: theme.colors.onSurfaceVariant },
+          }}
+          fixLabelOverlap
+        />
+        <VictoryAxis
+          dependentAxis
+          tickFormat={(t) => formatDuration(t)}
+          style={{
+            tickLabels: { fontSize: 8, fill: theme.colors.onSurfaceVariant },
+          }}
+        />
+        
+        <VictoryArea
+          data={data.map(d => ({ x: d.month, y: d.avgDurationMs, label: d.avgDurationFormatted }))}
+          style={{
+            data: { fill: "#1DB954", fillOpacity: 0.3, stroke: "#1DB954", strokeWidth: 2 }
+          }}
+        />
+
+        {overallAvg > 0 && (
+          <VictoryLine
+            y={() => overallAvg}
+            style={{
+              data: { stroke: "#FF9800", strokeWidth: 1.5, strokeDasharray: "5,5" }
             }}
           />
-          <Area
-            type="monotone"
-            dataKey="avgDurationMs"
-            stroke="#1DB954"
-            strokeWidth={2.5}
-            fill="url(#durationGradient)"
-            dot={{ r: 4, fill: '#1DB954', strokeWidth: 1, stroke: '#fff' }}
-            activeDot={{ r: 7, strokeWidth: 2 }}
-          />
-        </AreaChart>
-      </ResponsiveContainer>
-    </Box>
+        )}
+      </VictoryChart>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    padding: 8,
+  },
+  centered: {
+    height: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  summaryContainer: {
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  summaryLabel: {
+    opacity: 0.6,
+  },
+  summaryValue: {
+    fontWeight: 'bold',
+    color: '#1DB954',
+  },
+});
 
 export default TrackDurationChart;
