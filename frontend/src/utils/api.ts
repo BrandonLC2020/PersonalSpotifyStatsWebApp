@@ -1,6 +1,8 @@
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { REACT_APP_API_URL } from '@env';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+const API_URL = REACT_APP_API_URL || 'http://localhost:3001';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -8,10 +10,14 @@ const api = axios.create({
 
 // Add a request interceptor to include the auth token
 api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+  async (config) => {
+    try {
+      const token = await AsyncStorage.getItem('auth_token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (e) {
+      console.error('Failed to get token from storage', e);
     }
     return config;
   },
@@ -23,11 +29,15 @@ api.interceptors.request.use(
 // Add a response interceptor to handle 401 Unauthorized errors
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (error.response?.status === 401) {
-      // Clear token and redirect to login if unauthorized
-      localStorage.removeItem('auth_token');
-      window.location.href = '/';
+      // Clear token if unauthorized
+      try {
+        await AsyncStorage.removeItem('auth_token');
+        // Redirection should be handled by the AuthProvider/MainNavigator state change
+      } catch (e) {
+        console.error('Failed to clear token', e);
+      }
     }
     return Promise.reject(error);
   }

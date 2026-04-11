@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "My Spotify Stats",
+    "slug": "spotify-stats-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./public/logo192.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./public/logo512.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.brandonlamer.spotifystats"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./public/logo192.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.brandonlamer.spotifystats"
+    },
+    "web": {
+      "favicon": "./public/favicon.ico",
+      "bundler": "metro"
+    },
+    "plugins": [
+        "expo-font"
+    ]
+  }
+}

@@ -1,44 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  CircularProgress,
-  Alert,
-  Box,
-  Grid,
-  Card,
-  CardContent,
-  Link
-} from '@mui/material';
+import { View, StyleSheet, FlatList, Image, TouchableOpacity, Linking } from 'react-native';
+import { Text, ActivityIndicator, useTheme, Card, Avatar } from 'react-native-paper';
 import SpotifyWebApi from 'spotify-web-api-js';
-import { motion } from 'framer-motion';
-
-const MotionTableRow = motion(TableRow);
-const MotionGrid = motion(Grid);
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1
-    }
-  }
-};
-
-const itemVariants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: {
-    y: 0,
-    opacity: 1
-  }
-};
+import useSpotifyWeb from '../hooks/useSpotifyWeb';
 
 interface Track {
   id: string;
@@ -53,166 +17,119 @@ interface Track {
   };
 }
 
-interface CurrentTracksProps {
-  viewMode: 'table' | 'grid';
-  spotifyApi: SpotifyWebApi.SpotifyWebApiJs;
-}
+const TrackItem = ({ track, index }: { track: Track; index: number }) => {
+  const theme = useTheme();
+  return (
+    <TouchableOpacity onPress={() => Linking.openURL(track.external_urls.spotify)}>
+      <Card style={styles.card} mode="elevated">
+        <Card.Title
+          title={track.name}
+          subtitle={track.artists.map(a => a.name).join(', ')}
+          left={(props) => (
+            <View style={styles.avatarContainer}>
+                <Image 
+                    source={{ uri: track.album.images[0]?.url || 'https://via.placeholder.com/150' }} 
+                    style={styles.thumbnail}
+                />
+                <View style={styles.rankBadge}>
+                    <Text style={styles.rankText}>{index + 1}</Text>
+                </View>
+            </View>
+          )}
+          right={(props) => <Text style={styles.albumText} numberOfLines={1}>{track.album.name}</Text>}
+        />
+      </Card>
+    </TouchableOpacity>
+  );
+};
 
-const CurrentTopTracks: React.FC<CurrentTracksProps> = ({ viewMode, spotifyApi }) => {
+const CurrentTopTracks = () => {
+  const { spotifyApi, loading, error } = useSpotifyWeb();
   const [tracks, setTracks] = useState<Track[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [fetching, setFetching] = useState(false);
+  const theme = useTheme();
 
   useEffect(() => {
-    const fetchTopTracks = async () => {
-      setLoading(true);
-      try {
-        const response = await spotifyApi.getMyTopTracks({ limit: 50, time_range: 'short_term' });
-        setTracks(response.items as Track[]);
-        setError(null);
-      } catch (err) {
-        console.error('Failed to fetch top tracks from Spotify:', err);
-        setError('Failed to fetch top tracks from Spotify.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTopTracks();
+    if (spotifyApi) {
+      const fetchTracks = async () => {
+        setFetching(true);
+        try {
+          const response = await spotifyApi.getMyTopTracks({ limit: 50, time_range: 'short_term' });
+          setTracks(response.items as Track[]);
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setFetching(false);
+        }
+      };
+      fetchTracks();
+    }
   }, [spotifyApi]);
 
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    console.error('Image failed to load:', e.currentTarget.src);
-    e.currentTarget.src = 'https://via.placeholder.com/150';
-  };
-
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-        <CircularProgress />
-      </Box>
-    );
+  if (loading || fetching) {
+    return <ActivityIndicator style={styles.centered} size="large" />;
   }
 
   if (error) {
-    return <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>;
+    return <Text style={styles.centered}>Error: {error.message}</Text>;
   }
 
   return (
-    <Paper
-      component={motion.div}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      sx={{
-        p: 2,
-        display: 'flex',
-        flexDirection: 'column',
-        borderRadius: 2,
-        backgroundColor: 'background.glass',
-        backdropFilter: 'blur(10px)',
-        border: '1px solid',
-        borderColor: 'divider',
-        boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)'
-      }}
-    >
-      <Typography component="h2" variant="h6" color="primary" gutterBottom>
-        Current Top Tracks
-      </Typography>
-      {viewMode === 'table' ? (
-        <TableContainer>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>#</TableCell>
-                <TableCell>Title</TableCell>
-                <TableCell>Artist(s)</TableCell>
-                <TableCell>Album</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody component={motion.tbody} variants={containerVariants} initial="hidden" animate="visible">
-              {tracks.map((track, index) => (
-                <MotionTableRow
-                  key={track.id}
-                  hover
-                  variants={itemVariants}
-                  whileHover={{ scale: 1.01, backgroundColor: 'rgba(255,255,255,0.05)' }}
-                  transition={{ type: 'spring', stiffness: 300 }}
-                >
-                  <TableCell>{index + 1}</TableCell>
-                  <TableCell>
-                    <Link href={track.external_urls.spotify} target="_blank" rel="noopener noreferrer" color="inherit">
-                      {track.name}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{track.artists.map(artist => artist.name).join(', ')}</TableCell>
-                  <TableCell>{track.album.name}</TableCell>
-                </MotionTableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      ) : (
-        <Grid container spacing={2} component={motion.div} variants={containerVariants} initial="hidden" animate="visible">
-          {tracks.map((track, index) => (
-            <MotionGrid item xs={6} sm={4} md={3} key={track.id} variants={itemVariants}>
-              <Card
-                component={motion.div}
-                whileHover={{ y: -5, boxShadow: '0 8px 16px rgba(0,0,0,0.2)' }}
-                sx={{
-                  height: '100%',
-                  backgroundColor: 'background.card',
-                  position: 'relative',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  backdropFilter: 'blur(5px)'
-                }}
-              >
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    top: 8,
-                    left: 8,
-                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                    color: 'white',
-                    borderRadius: '50%',
-                    width: 32,
-                    height: 32,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 1,
-                  }}
-                >
-                  <Typography variant="body1" component="span">{index + 1}</Typography>
-                </Box>
-                <img
-                  src={track.album.images[0]?.url || 'https://via.placeholder.com/150'}
-                  alt={track.name}
-                  onError={handleImageError}
-                  style={{
-                    width: '100%',
-                    aspectRatio: '1 / 1',
-                    objectFit: 'cover',
-                  }}
-                />
-                <CardContent>
-                  <Typography gutterBottom variant="h6" component="div">
-                    <Link href={track.external_urls.spotify} target="_blank" rel="noopener noreferrer" color="inherit">
-                      {track.name}
-                    </Link>
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {track.artists.map(artist => artist.name).join(', ')}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </MotionGrid>
-          ))}
-        </Grid>
-      )}
-    </Paper>
+    <FlatList
+      data={tracks}
+      keyExtractor={(item) => item.id}
+      renderItem={({ item, index }) => <TrackItem track={item} index={index} />}
+      contentContainerStyle={styles.list}
+    />
   );
 };
+
+const styles = StyleSheet.create({
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  list: {
+    padding: 16,
+  },
+  card: {
+    marginBottom: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  avatarContainer: {
+      position: 'relative',
+  },
+  thumbnail: {
+    width: 50,
+    height: 50,
+    borderRadius: 4,
+  },
+  rankBadge: {
+      position: 'absolute',
+      top: -5,
+      left: -5,
+      backgroundColor: '#1DB954',
+      borderRadius: 10,
+      width: 20,
+      height: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: 'white',
+  },
+  rankText: {
+      color: 'white',
+      fontSize: 10,
+      fontWeight: 'bold',
+  },
+  albumText: {
+      fontSize: 12,
+      opacity: 0.6,
+      marginRight: 16,
+      maxWidth: 100,
+  }
+});
 
 export default CurrentTopTracks;

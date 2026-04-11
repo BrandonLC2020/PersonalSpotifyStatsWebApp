@@ -1,46 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  CircularProgress,
-  Alert,
-  Box,
-  Grid,
-  Card,
-  CardContent,
-  Link
-} from '@mui/material';
-import SpotifyWebApi from 'spotify-web-api-js';
-import { motion } from 'framer-motion';
+import { View, StyleSheet, FlatList, Image, TouchableOpacity, Linking } from 'react-native';
+import { Text, ActivityIndicator, useTheme, Card, Avatar, Chip } from 'react-native-paper';
+import useSpotifyWeb from '../../hooks/useSpotifyWeb';
 
-const MotionTableRow = motion(TableRow);
-const MotionGrid = motion(Grid);
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1
-    }
-  }
-};
-
-const itemVariants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: {
-    y: 0,
-    opacity: 1
-  }
-};
-
-// Define the structure of an Artist object
 interface Artist {
   id: string;
   name: string;
@@ -51,167 +13,112 @@ interface Artist {
   };
 }
 
-// Update props to receive the spotifyApi object
-interface CurrentArtistsProps {
-  viewMode: 'table' | 'grid';
-  spotifyApi: SpotifyWebApi.SpotifyWebApiJs;
-}
+const ArtistItem = ({ artist, index }: { artist: Artist; index: number }) => {
+  const theme = useTheme();
+  return (
+    <TouchableOpacity onPress={() => Linking.openURL(artist.external_urls.spotify)}>
+      <Card style={styles.card} mode="elevated">
+        <Card.Title
+          title={artist.name}
+          subtitle={artist.genres.slice(0, 2).join(', ')}
+          left={(props) => (
+            <View style={styles.avatarContainer}>
+                <Image 
+                    source={{ uri: artist.images[0]?.url || 'https://via.placeholder.com/150' }} 
+                    style={styles.avatar}
+                />
+                <View style={styles.rankBadge}>
+                    <Text style={styles.rankText}>{index + 1}</Text>
+                </View>
+            </View>
+          )}
+        />
+      </Card>
+    </TouchableOpacity>
+  );
+};
 
-const CurrentTopArtists: React.FC<CurrentArtistsProps> = ({ viewMode, spotifyApi }) => {
-  // Remove the useSpotifyWeb() hook call
+const CurrentTopArtists = () => {
+  const { spotifyApi, loading, error } = useSpotifyWeb();
   const [artists, setArtists] = useState<Artist[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [fetching, setFetching] = useState(false);
+  const theme = useTheme();
 
   useEffect(() => {
-    const fetchTopArtists = async () => {
-      setLoading(true);
-      try {
-        const response = await spotifyApi.getMyTopArtists({ limit: 50, time_range: 'short_term' });
-        setArtists(response.items as Artist[]);
-        setError(null);
-      } catch (err) {
-        console.error('Failed to fetch top artists from Spotify:', err);
-        setError('Failed to fetch top artists from Spotify.');
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (spotifyApi) {
+      const fetchArtists = async () => {
+        setFetching(true);
+        try {
+          const response = await spotifyApi.getMyTopArtists({ limit: 50, time_range: 'short_term' });
+          setArtists(response.items as Artist[]);
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setFetching(false);
+        }
+      };
+      fetchArtists();
+    }
+  }, [spotifyApi]);
 
-    fetchTopArtists();
-
-  }, [spotifyApi]); // Effect now depends on the stable spotifyApi prop
-
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    console.error('Image failed to load:', e.currentTarget.src);
-    e.currentTarget.src = 'https://via.placeholder.com/150';
-  };
-
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-        <CircularProgress />
-      </Box>
-    );
+  if (loading || fetching) {
+    return <ActivityIndicator style={styles.centered} size="large" />;
   }
 
   if (error) {
-    return <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>;
+    return <Text style={styles.centered}>Error: {error.message}</Text>;
   }
 
   return (
-    <Paper
-      component={motion.div}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      sx={{
-        p: 2,
-        display: 'flex',
-        flexDirection: 'column',
-        borderRadius: 2,
-        backgroundColor: 'background.glass',
-        backdropFilter: 'blur(10px)',
-        border: '1px solid',
-        borderColor: 'divider',
-        boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)'
-      }}
-    >
-      <Typography component="h2" variant="h6" color="primary" gutterBottom>
-        Current Top Artists
-      </Typography>
-      {viewMode === 'table' ? (
-        <TableContainer>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>#</TableCell>
-                <TableCell>Name</TableCell>
-                <TableCell>Genres</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody component={motion.tbody} variants={containerVariants} initial="hidden" animate="visible">
-              {artists.map((artist, index) => (
-                <MotionTableRow
-                  key={artist.id}
-                  hover
-                  variants={itemVariants}
-                  whileHover={{ scale: 1.01, backgroundColor: 'rgba(255,255,255,0.05)' }}
-                  transition={{ type: 'spring', stiffness: 300 }}
-                >
-                  <TableCell>{index + 1}</TableCell>
-                  <TableCell>
-                    <Link href={artist.external_urls.spotify} target="_blank" rel="noopener noreferrer" color="inherit">
-                      {artist.name}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{artist.genres.join(', ')}</TableCell>
-                </MotionTableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      ) : (
-        <Grid container spacing={2} component={motion.div} variants={containerVariants} initial="hidden" animate="visible">
-          {artists.map((artist, index) => (
-            <MotionGrid item xs={6} sm={4} md={3} key={artist.id} variants={itemVariants}>
-              <Card
-                component={motion.div}
-                whileHover={{ y: -5, boxShadow: '0 8px 16px rgba(0,0,0,0.2)' }}
-                sx={{
-                  height: '100%',
-                  backgroundColor: 'background.card',
-                  position: 'relative',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  backdropFilter: 'blur(5px)'
-                }}
-              >
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    top: 8,
-                    left: 8,
-                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                    color: 'white',
-                    borderRadius: '50%',
-                    width: 32,
-                    height: 32,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 1,
-                  }}
-                >
-                  <Typography variant="body1" component="span">{index + 1}</Typography>
-                </Box>
-                <img
-                  src={artist.images[0]?.url || 'https://via.placeholder.com/150'}
-                  alt={artist.name}
-                  onError={handleImageError}
-                  style={{
-                    width: '100%',
-                    aspectRatio: '1 / 1',
-                    objectFit: 'cover',
-                  }}
-                />
-                <CardContent>
-                  <Typography gutterBottom variant="h6" component="div">
-                    <Link href={artist.external_urls.spotify} target="_blank" rel="noopener noreferrer" color="inherit">
-                      {artist.name}
-                    </Link>
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {artist.genres.join(', ')}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </MotionGrid>
-          ))}
-        </Grid>
-      )}
-    </Paper>
+    <FlatList
+      data={artists}
+      keyExtractor={(item) => item.id}
+      renderItem={({ item, index }) => <ArtistItem artist={item} index={index} />}
+      contentContainerStyle={styles.list}
+    />
   );
 };
+
+const styles = StyleSheet.create({
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  list: {
+    padding: 16,
+  },
+  card: {
+    marginBottom: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  avatarContainer: {
+      position: 'relative',
+  },
+  avatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+  },
+  rankBadge: {
+      position: 'absolute',
+      top: -5,
+      left: -5,
+      backgroundColor: '#1DB954',
+      borderRadius: 10,
+      width: 20,
+      height: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: 'white',
+  },
+  rankText: {
+      color: 'white',
+      fontSize: 10,
+      fontWeight: 'bold',
+  }
+});
 
 export default CurrentTopArtists;

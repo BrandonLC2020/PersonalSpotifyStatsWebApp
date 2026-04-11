@@ -2,6 +2,15 @@ import { useState, useEffect } from 'react';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 import SpotifyWebApi from 'spotify-web-api-js';
 import axios from 'axios';
+import { decode as atob, encode as btoa } from 'base-64';
+import {
+  REACT_APP_CLIENT_ID,
+  REACT_APP_CLIENT_SECRET,
+  REACT_APP_AWS_DEFAULT_REGION,
+  REACT_APP_AWS_ACCESS_KEY_ID,
+  REACT_APP_AWS_SECRET_ACCESS_KEY,
+  REACT_APP_SECRET_NAME
+} from '@env';
 
 const useSpotifyWeb = () => {
   const [spotifyApi, setSpotifyApi] = useState<SpotifyWebApi.SpotifyWebApiJs | null>(null);
@@ -11,24 +20,23 @@ const useSpotifyWeb = () => {
   useEffect(() => {
     const fetchTokenAndInitSpotify = async () => {
       try {
-        // --- Get CLIENT_ID and CLIENT_SECRET from .env file ---
-        const clientId = process.env.REACT_APP_CLIENT_ID;
-        const clientSecret = process.env.REACT_APP_CLIENT_SECRET;
+        const clientId = REACT_APP_CLIENT_ID;
+        const clientSecret = REACT_APP_CLIENT_SECRET;
 
         if (!clientId || !clientSecret) {
-          throw new Error('Missing REACT_APP_CLIENT_ID or REACT_APP_CLIENT_SECRET in your .env file');
+          throw new Error('Missing Client ID or Client Secret in environment variables');
         }
 
         // --- AWS Secrets Manager Configuration ---
         const client = new SecretsManagerClient({
-          region: process.env.REACT_APP_AWS_DEFAULT_REGION,
+          region: REACT_APP_AWS_DEFAULT_REGION,
           credentials: {
-            accessKeyId: process.env.REACT_APP_AWS_ACCESS_KEY_ID || '',
-            secretAccessKey: process.env.REACT_APP_AWS_SECRET_ACCESS_KEY || '',
+            accessKeyId: REACT_APP_AWS_ACCESS_KEY_ID || '',
+            secretAccessKey: REACT_APP_AWS_SECRET_ACCESS_KEY || '',
           },
         });
 
-        const command = new GetSecretValueCommand({ SecretId: process.env.REACT_APP_SECRET_NAME });
+        const command = new GetSecretValueCommand({ SecretId: REACT_APP_SECRET_NAME });
         const data = await client.send(command);
 
         if (data.SecretString) {
@@ -37,12 +45,13 @@ const useSpotifyWeb = () => {
 
           if (refreshToken) {
             // --- Exchange Refresh Token for Access Token ---
+            const params = new URLSearchParams();
+            params.append('grant_type', 'refresh_token');
+            params.append('refresh_token', refreshToken);
+
             const response = await axios.post(
               'https://accounts.spotify.com/api/token',
-              new URLSearchParams({
-                grant_type: 'refresh_token',
-                refresh_token: refreshToken,
-              }),
+              params.toString(),
               {
                 headers: {
                   'Content-Type': 'application/x-www-form-urlencoded',
@@ -67,6 +76,7 @@ const useSpotifyWeb = () => {
           throw new Error('SecretString is empty');
         }
       } catch (err: any) {
+        console.error('Spotify initialization error:', err);
         setError(err);
       } finally {
         setLoading(false);
