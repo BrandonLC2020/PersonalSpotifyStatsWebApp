@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
 import {
   ArtistDominanceMonth,
   AlbumConcentrationMonth,
@@ -7,8 +7,6 @@ import {
   EntityChurnMonth,
   YearSummary,
 } from '../types';
-
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
 interface FetchState<T> {
   data: T | null;
@@ -31,7 +29,7 @@ function useGenericFetch<T>(url: string, skip: boolean = false): FetchState<T> {
     const fetchData = async () => {
       setState(prev => ({ ...prev, loading: true, error: null }));
       try {
-        const response = await axios.get<T>(url);
+        const response = await api.get<T>(url);
         if (!cancelled) {
           setState({ data: response.data, loading: false, error: null });
         }
@@ -57,33 +55,33 @@ function useGenericFetch<T>(url: string, skip: boolean = false): FetchState<T> {
 export function useArtistTrackDominance(year?: number) {
   const params = year ? `?year=${year}` : '';
   return useGenericFetch<ArtistDominanceMonth[]>(
-    `${API_BASE}/api/analytics/artist_track_dominance${params}`
+    `/api/analytics/artist_track_dominance${params}`
   );
 }
 
 export function useAlbumConcentration(year?: number) {
   const params = year ? `?year=${year}` : '';
   return useGenericFetch<AlbumConcentrationMonth[]>(
-    `${API_BASE}/api/analytics/album_concentration${params}`
+    `/api/analytics/album_concentration${params}`
   );
 }
 
 export function useNewVsCatalog(year?: number) {
   const params = year ? `?year=${year}` : '';
   return useGenericFetch<NewVsCatalogMonth[]>(
-    `${API_BASE}/api/analytics/new_vs_catalog${params}`
+    `/api/analytics/new_vs_catalog${params}`
   );
 }
 
 export function useEntityChurn(type: 'tracks' | 'artists' | 'albums') {
   return useGenericFetch<EntityChurnMonth[]>(
-    `${API_BASE}/api/analytics/entity_churn?type=${type}`
+    `/api/analytics/entity_churn?type=${type}`
   );
 }
 
 export function useYearSummary(year: number | null) {
   return useGenericFetch<YearSummary>(
-    `${API_BASE}/api/analytics/year_summary?year=${year}`,
+    `/api/analytics/year_summary?year=${year}`,
     year === null
   );
 }

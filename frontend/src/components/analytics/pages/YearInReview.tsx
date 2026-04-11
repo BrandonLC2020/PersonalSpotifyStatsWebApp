@@ -7,15 +7,12 @@ import {
 } from '../charts/TypedRecharts';
 import { useTheme } from '@mui/material/styles';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion } from 'framer-motion';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import SpotifyWebApi from 'spotify-web-api-js';
 import useAnalyticsData from '../../../hooks/useAnalyticsData';
-import useAudioFeatures from '../../../hooks/useAudioFeatures';
-import { computeLoyaltyStats, computeAudioProfileAvg } from '../../../utils/analyticsUtils';
 import { getChartStyles, getTooltipStyle, getMonthLabel, CHART_COLORS } from '../../../utils/chartTheme';
-import MusicDNACard from '../charts/MusicDNACard';
 
 interface Props {
   spotifyApi: SpotifyWebApi.SpotifyWebApiJs;
@@ -45,8 +42,6 @@ const YearInReview: React.FC<Props> = ({ spotifyApi }) => {
   const year = parseInt(yearParam || '2025', 10);
 
   const { tracks, artists, albums, allMonths, loading, error } = useAnalyticsData();
-  const { fetchFeatures, error: audioError } = useAudioFeatures(spotifyApi);
-  const [valenceArc, setValenceArc] = useState<{ month: string; valence: number }[]>([]);
   const [topArtistImage, setTopArtistImage] = useState<string>('');
 
   // Filter data for the selected year
@@ -118,30 +113,7 @@ const YearInReview: React.FC<Props> = ({ spotifyApi }) => {
     }
   }, [summary]);
 
-  // Fetch valence arc (skip if audio features deprecated)
-  useEffect(() => {
-    if (audioError === 'DEPRECATED') return;
 
-    const load = async () => {
-      const monthlyValences: { month: string; valence: number }[] = [];
-
-      for (const group of yearTracks.sort((a, b) => a.month - b.month)) {
-        const ids = group.records.map(t => t.track_id);
-        if (ids.length === 0) continue;
-
-        const features = await fetchFeatures(ids);
-        const avg = computeAudioProfileAvg(features);
-        monthlyValences.push({
-          month: getMonthLabel(group.month, group.year),
-          valence: avg?.valence ?? 0,
-        });
-      }
-
-      setValenceArc(monthlyValences);
-    };
-
-    if (yearTracks.length > 0) load();
-  }, [yearTracks, fetchFeatures, audioError]);
 
   if (loading) {
     return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}><CircularProgress size={48} /></Box>;
@@ -298,47 +270,7 @@ const YearInReview: React.FC<Props> = ({ spotifyApi }) => {
         </Section>
       )}
 
-      {/* Section 5: Mood Arc */}
-      {valenceArc.length > 0 && (
-        <Section delay={0.1}>
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="overline" sx={{ color: '#1DB954', letterSpacing: 3 }}>
-              YOUR MOOD ARC
-            </Typography>
-            <Typography variant="h4" sx={{ fontWeight: 700, mt: 1, mb: 3 }}>
-              Your emotional journey through {year}
-            </Typography>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={valenceArc} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                <defs>
-                  <linearGradient id="valenceGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#1DB954" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#1DB954" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={styles.gridColor} />
-                <XAxis dataKey="month" tick={{ fill: styles.axisColor, fontSize: 11 }} />
-                <YAxis
-                  domain={[0, 1]}
-                  tick={{ fill: styles.axisColor, fontSize: 11 }}
-                  tickFormatter={(v: number) => v >= 0.5 ? '😊' : '😢'}
-                />
-                <Tooltip
-                  contentStyle={tooltipStyles.contentStyle}
-                  formatter={(v: number) => [`${Math.round(v * 100)}% happy`, 'Mood']}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="valence"
-                  stroke="#1DB954"
-                  strokeWidth={3}
-                  dot={{ r: 5, fill: '#1DB954', stroke: '#fff', strokeWidth: 2 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </Box>
-        </Section>
-      )}
+
 
       {/* Section 6: By the Numbers */}
       <Section delay={0.1}>
@@ -381,15 +313,7 @@ const YearInReview: React.FC<Props> = ({ spotifyApi }) => {
         </Box>
       </Section>
 
-      {/* Section 7: Music DNA for this year */}
-      <Section delay={0.1}>
-        <Box sx={{ textAlign: 'center', mb: 3 }}>
-          <Typography variant="overline" sx={{ color: '#1DB954', letterSpacing: 3 }}>
-            YOUR {year} MUSIC DNA
-          </Typography>
-        </Box>
-        <MusicDNACard tracks={yearTracks} artists={yearArtists} albums={yearAlbums} spotifyApi={spotifyApi} />
-      </Section>
+
 
       {/* Outro */}
       <Section>

@@ -18,14 +18,7 @@ import ExplicitContentChart from './charts/ExplicitContentChart';
 // Tier 2 charts
 import ArtistDominanceChart from './charts/ArtistDominanceChart';
 import AlbumConcentrationChart from './charts/AlbumConcentrationChart';
-import NewVsCatalogChart from './charts/NewVsCatalogChart';
 import EntityChurnChart from './charts/EntityChurnChart';
-
-// Tier 3 charts
-import AudioProfileRadar from './charts/AudioProfileRadar';
-import MoodTimeline from './charts/MoodTimeline';
-import MusicDNACard from './charts/MusicDNACard';
-import ListeningPersonality from './pages/ListeningPersonality';
 
 const MotionBox = motion(Box);
 
@@ -53,7 +46,7 @@ interface AnalyticsDashboardProps {
 const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ spotifyApi }) => {
   const theme = useTheme();
   const navigate = useNavigate();
-  const { tracks, artists, albums, allMonths, loading, error } = useAnalyticsData();
+  const { tracks, artists, allMonths, loading, error } = useAnalyticsData();
   const mode = theme.palette.mode as 'light' | 'dark';
 
   if (loading) {
@@ -224,20 +217,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ spotifyApi }) =
           </MotionBox>
         </Grid>
 
-        {/* Row 4: New vs Catalog + Album Concentration */}
-        <Grid item xs={12} md={6}>
-          <MotionBox variants={itemVariants}>
-            <Paper sx={chartCardSx(mode)}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                📅 New vs. Catalog
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Balancing fresh releases with familiar classics
-              </Typography>
-              <NewVsCatalogChart />
-            </Paper>
-          </MotionBox>
-        </Grid>
+        {/* Row 4: Album Concentration + Artist Dominance */}
         <Grid item xs={12} md={6}>
           <MotionBox variants={itemVariants}>
             <Paper sx={chartCardSx(mode)}>
@@ -251,8 +231,6 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ spotifyApi }) =
             </Paper>
           </MotionBox>
         </Grid>
-
-        {/* Row 5: Artist Dominance + Entity Churn */}
         <Grid item xs={12} md={6}>
           <MotionBox variants={itemVariants}>
             <Paper sx={chartCardSx(mode)}>
@@ -266,7 +244,9 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ spotifyApi }) =
             </Paper>
           </MotionBox>
         </Grid>
-        <Grid item xs={12} md={6}>
+
+        {/* Row 5: Entity Churn */}
+        <Grid item xs={12}>
           <MotionBox variants={itemVariants}>
             <Paper sx={chartCardSx(mode)}>
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
@@ -277,54 +257,6 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ spotifyApi }) =
               </Typography>
               <EntityChurnChart />
             </Paper>
-          </MotionBox>
-        </Grid>
-
-        {/* Row 6: Audio Profile Radar (full width) */}
-        <Grid item xs={12}>
-          <MotionBox variants={itemVariants}>
-            <Paper sx={chartCardSx(mode)}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                🎧 Audio Profile
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                What your music taste sounds like — danceability, energy, mood, and more
-              </Typography>
-              <AudioProfileRadar tracks={tracks} spotifyApi={spotifyApi} />
-            </Paper>
-          </MotionBox>
-        </Grid>
-
-        {/* Row 7: Mood Timeline + Music DNA / Personality */}
-        <Grid item xs={12} md={6}>
-          <MotionBox variants={itemVariants}>
-            <Paper sx={chartCardSx(mode)}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                😊 Mood Timeline
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Your tracks mapped on a happiness × energy grid
-              </Typography>
-              <MoodTimeline tracks={tracks} spotifyApi={spotifyApi} />
-            </Paper>
-          </MotionBox>
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <MotionBox variants={itemVariants}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <MusicDNACard
-                tracks={tracks}
-                artists={artists}
-                albums={albums}
-                spotifyApi={spotifyApi}
-              />
-              <ListeningPersonality
-                tracks={tracks}
-                artists={artists}
-                spotifyApi={spotifyApi}
-                compact
-              />
-            </Box>
           </MotionBox>
         </Grid>
       </Grid>

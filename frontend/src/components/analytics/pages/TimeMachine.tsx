@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import {
-  Box, Typography, Paper, Grid, ToggleButton, ToggleButtonGroup,
+  Box, Typography, Paper, Grid,
   CircularProgress, Alert, Chip, Avatar
 } from '@mui/material';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from '../charts/TypedRecharts';
@@ -8,10 +8,7 @@ import { useTheme } from '@mui/material/styles';
 import { motion } from 'framer-motion';
 import SpotifyWebApi from 'spotify-web-api-js';
 import useAnalyticsData from '../../../hooks/useAnalyticsData';
-import useAudioFeatures from '../../../hooks/useAudioFeatures';
 import { chartCardSx, CHART_COLORS, getMonthLabel } from '../../../utils/chartTheme';
-import { computeAudioProfileAvg } from '../../../utils/analyticsUtils';
-import AudioProfileRadar from '../charts/AudioProfileRadar';
 
 interface Props {
   spotifyApi: SpotifyWebApi.SpotifyWebApiJs;

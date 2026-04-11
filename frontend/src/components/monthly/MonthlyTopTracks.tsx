@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../utils/api';
 import {
   Typography,
   Table,
@@ -60,9 +60,6 @@ interface GroupedTracks {
   records: Track[];
 }
 
-// The API endpoint for fetching tracks
-const API_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api/tracks`;
-
 interface TracksProps {
   viewMode: 'table' | 'grid';
   spotifyApi: SpotifyWebApi.SpotifyWebApiJs;
@@ -77,7 +74,7 @@ const MonthlyTopTracks: React.FC<TracksProps> = ({ viewMode, spotifyApi }) => {
   useEffect(() => {
     const fetchTracksAndArt = async () => {
       try {
-        const response = await axios.get<GroupedTracks[]>(API_URL);
+        const response = await api.get<GroupedTracks[]>('/api/tracks');
         setGroupedTracks(response.data);
         setError(null);
 

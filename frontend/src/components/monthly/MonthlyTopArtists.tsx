@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../utils/api';
 import {
   Typography,
   Table,
@@ -61,8 +61,6 @@ interface GroupedArtists {
   records: Artist[];
 }
 
-const API_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api/artists`;
-
 interface ArtistsProps {
   viewMode: 'table' | 'grid';
 }
@@ -75,7 +73,7 @@ const MonthlyTopArtists: React.FC<ArtistsProps> = ({ viewMode }) => {
   useEffect(() => {
     const fetchArtists = async () => {
       try {
-        const response = await axios.get<GroupedArtists[]>(API_URL);
+        const response = await api.get<GroupedArtists[]>('/api/artists');
         setGroupedArtists(response.data);
         setError(null);
       } catch (err) {

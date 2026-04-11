@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../utils/api';
 import {
   Typography,
   Table,
@@ -61,8 +61,6 @@ interface GroupedAlbums {
   records: Album[];
 }
 
-const API_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api/albums`;
-
 interface AlbumsProps {
   viewMode: 'table' | 'grid';
 }
@@ -75,7 +73,7 @@ const MonthlyTopAlbums: React.FC<AlbumsProps> = ({ viewMode }) => {
   useEffect(() => {
     const fetchAlbums = async () => {
       try {
-        const response = await axios.get<GroupedAlbums[]>(API_URL);
+        const response = await api.get<GroupedAlbums[]>('/api/albums');
         setGroupedAlbums(response.data);
         setError(null);
       } catch (err) {

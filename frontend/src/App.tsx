@@ -13,7 +13,8 @@ import {
   CircularProgress,
   Alert,
   Tabs,
-  Tab
+  Tab,
+  Tooltip
 } from '@mui/material';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
 import PersonIcon from '@mui/icons-material/Person';
@@ -23,6 +24,7 @@ import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import InsightsIcon from '@mui/icons-material/Insights';
+import LogoutIcon from '@mui/icons-material/Logout';
 import { ThemeProvider } from '@mui/material/styles';
 import { PaletteMode } from '@mui/material';
 import { createCustomTheme } from './theme';
@@ -34,7 +36,9 @@ import CurrentTopArtists from './components/current/CurrentTopArtists';
 import AnalyticsDashboard from './components/analytics/AnalyticsDashboard';
 import TimeMachine from './components/analytics/pages/TimeMachine';
 import YearInReview from './components/analytics/pages/YearInReview';
+import LoginPage from './components/auth/LoginPage';
 import useSpotifyWeb from './hooks/useSpotifyWeb';
+import { AuthProvider, useAuth } from './context/AuthContext';
 
 function AppContent() {
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
@@ -42,6 +46,7 @@ function AppContent() {
   const theme = React.useMemo(() => createCustomTheme(mode), [mode]);
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAuthenticated, logout, loading: authLoading } = useAuth();
 
   const toggleColorMode = () => {
     setMode((prevMode) => (prevMode === 'light' ? 'dark' : 'light'));
@@ -85,6 +90,18 @@ function AppContent() {
     else if (newValue === 1) navigate(`${section}/artists`);
     else if (newValue === 2) navigate(`${section}/albums`);
   };
+
+  if (authLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', bgcolor: 'background.default' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
 
   const showEntityTabs = activeSection !== 'analytics';
   const showViewToggle = activeSection !== 'analytics';
@@ -154,13 +171,22 @@ function AppContent() {
               </ToggleButton>
             </ToggleButtonGroup>
             {showViewToggle && (
-              <IconButton onClick={handleViewChange} color="inherit" sx={{ ml: 1 }}>
-                {viewMode === 'table' ? <ViewModuleIcon /> : <ViewListIcon />}
-              </IconButton>
+              <Tooltip title="Toggle View Mode">
+                <IconButton onClick={handleViewChange} color="inherit" sx={{ ml: 1 }}>
+                  {viewMode === 'table' ? <ViewModuleIcon /> : <ViewListIcon />}
+                </IconButton>
+              </Tooltip>
             )}
-            <IconButton onClick={toggleColorMode} color="inherit" sx={{ ml: 1 }}>
-              {theme.palette.mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
-            </IconButton>
+            <Tooltip title="Toggle Color Mode">
+              <IconButton onClick={toggleColorMode} color="inherit" sx={{ ml: 1 }}>
+                {theme.palette.mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Logout">
+              <IconButton onClick={logout} color="inherit" sx={{ ml: 1 }}>
+                <LogoutIcon />
+              </IconButton>
+            </Tooltip>
           </Toolbar>
           {showEntityTabs && (
             <Tabs
@@ -190,9 +216,13 @@ function AppContent() {
 function App() {
   return (
     <Router>
-      <AppContent />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </Router>
   );
 }
+
+export default App;
 
 export default App;

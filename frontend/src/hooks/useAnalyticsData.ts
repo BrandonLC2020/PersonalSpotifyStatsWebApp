@@ -1,9 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
 import { GroupedRecords, Track, Artist, Album, MonthLabel } from '../types';
 import { getAllMonths } from '../utils/analyticsUtils';
-
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
 interface AnalyticsDataState {
   tracks: GroupedRecords<Track>[];
@@ -37,9 +35,9 @@ const useAnalyticsData = (): AnalyticsDataState => {
     const fetchAll = async () => {
       try {
         const [tracksRes, artistsRes, albumsRes] = await Promise.all([
-          axios.get<GroupedRecords<Track>[]>(`${API_BASE}/api/tracks`),
-          axios.get<GroupedRecords<Artist>[]>(`${API_BASE}/api/artists`),
-          axios.get<GroupedRecords<Album>[]>(`${API_BASE}/api/albums`),
+          api.get<GroupedRecords<Track>[]>('/api/tracks'),
+          api.get<GroupedRecords<Artist>[]>('/api/artists'),
+          api.get<GroupedRecords<Album>[]>('/api/albums'),
         ]);
 
         const allMonths = getAllMonths(

@@ -1,6 +1,7 @@
 # backend/config/routes.rb
 Rails.application.routes.draw do
   namespace :api do
+    post 'login', to: 'auth#login'
     resources :tracks, only: [:index]
     resources :artists, only: [:index]
     resources :albums, only: [:index]
