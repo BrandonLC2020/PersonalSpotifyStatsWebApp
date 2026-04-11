@@ -1,4 +1,7 @@
-class ApplicationController < ActionController::Base
+class ApplicationController < ActionController::API
+  # Skip authenticity token verification for API requests
+  # (ActionController::API doesn't include it by default, but this ensures it's off)
+  # skip_before_action :verify_authenticity_token, raise: false
   before_action :authenticate_request
 
   private
