@@ -1,17 +1,20 @@
-# Personal Spotify Stats Web App
+# Personal Spotify Stats App (React Native/Expo)
 
-This web application displays your personal Spotify statistics, featuring a React frontend and a Ruby on Rails backend. It offers both real-time and historical views of your listening habits.
+This application displays your personal Spotify statistics, featuring a React Native (Expo) frontend and a Ruby on Rails backend. It offers both real-time and historical views of your listening habits across mobile and web platforms.
 
 -----
 
 ## Features
 
-  * **Current & Monthly Stats**: Toggle between your current, real-time listening stats and your historical monthly data.
-  * **View Top Tracks**: See a list of your most played tracks, complete with album art.
-  * **View Top Artists**: Discover your most listened to artists.
-  * **View Top Albums**: See a list of your most played albums.
-  * **Interactive UI**: A clean, tab-based navigation and a grid/table view toggle to customize your experience.
-  * **Historical Data Grouping**: Monthly stats are organized in an accordion view, grouped by month and year for easy browsing.
+  * **Cross-Platform Analytics**: Seamless experience on iOS, Android, and Web using Expo.
+  * **Premium Charts with Victory Native**:
+    * **Ranking Movement**: Track how your top songs/artists change over time.
+    * **Artist Loyalty**: Deep dive into artist retention and churn.
+    * **Genre Diversity**: Multi-layered area charts showing your taste evolution.
+    * **Popularity Heatmaps**: Visual distribution of your listening habits.
+  * **Time Machine**: Browse and compare specific months of your listening history.
+  * **Year in Review**: A beautifully animated annual summary of your top music.
+  * **Historical Data Grouping**: Monthly stats are organized by year for easy browsing.
 
 -----
 
@@ -25,8 +28,8 @@ You can see screen recordings and screenshots of the app [here](https://brandonl
 
 ```mermaid
 graph TD
-    subgraph "User's Browser"
-        A[React Frontend]
+    subgraph "Client App (Expo)"
+        A[React Native Frontend]
     end
 
     subgraph "Backend Infrastructure (AWS)"
@@ -60,11 +63,12 @@ graph TD
 
 ### Frontend
 
-  * **React**: A JavaScript library for building user interfaces.
-  * **TypeScript**: A typed superset of JavaScript that compiles to plain JavaScript.
-  * **Material UI**: A popular React UI framework.
-  * **Axios**: A promise-based HTTP client for the browser and Node.js.
-  * **Spotify Web API**: Used to fetch real-time user data and album artwork.
+  * **React Native (Expo)**: Framework for building native apps using React.
+  * **TypeScript**: A typed superset of JavaScript.
+  * **React Native Paper (MD3)**: Material Design 3 UI component library.
+  * **Victory Native**: Powerful data visualization library for React Native.
+  * **Axios**: Promised-based HTTP client.
+  * **Spotify Web API**: Used for real-time data fetching.
 
 ### Infrastructure
 
@@ -88,17 +92,17 @@ The backend requires credentials for your database and the bastion host used for
   * `DB_HOST`: The hostname of your database instance (e.g., an AWS RDS endpoint).
   * `BASTION_HOST`: The address of your SSH bastion host.
   * `BASTION_USER`: The username for the bastion host.
-  * `BASTION_KEYFILE_PATH`: The local path to your SSH private key for the bastion host (e.g., `~/.ssh/my-key.pem`).
+  * `BASTION_KEYFILE_PATH`: The local path to your SSH private key for the bastion host.
 
 ### Frontend (`frontend/.env`)
 
-The frontend requires credentials for the Spotify API and AWS Secrets Manager (which is used to securely store the Spotify refresh token).
+The frontend requires credentials for the Spotify API and AWS Secrets Manager. Note that in Expo, variables should be accessible either via `react-native-dotenv` or `process.env`.
 
   * `REACT_APP_CLIENT_ID`: Your Spotify application's Client ID.
   * `REACT_APP_CLIENT_SECRET`: Your Spotify application's Client Secret.
   * `REACT_APP_AWS_ACCESS_KEY_ID`: Your AWS access key ID.
   * `REACT_APP_AWS_SECRET_ACCESS_KEY`: Your AWS secret access key.
-  * `REACT_APP_AWS_DEFAULT_REGION`: The AWS region where your secret is stored.
+  * `REACT_APP_AWS_DEFAULT_REGION`: The AWS region.
   * `REACT_APP_SECRET_NAME`: The name of the secret in AWS Secrets Manager.
 
 -----
@@ -109,6 +113,7 @@ The frontend requires credentials for the Spotify API and AWS Secrets Manager (w
 
   * Ruby 3.3.4
   * Node.js and npm
+  * Expo Go app (on your iOS/Android device)
   * MySQL
 
 ### Backend Setup
@@ -148,33 +153,26 @@ The frontend requires credentials for the Spotify API and AWS Secrets Manager (w
     npm install
     ```
 3.  **Set up Environment Variables**:
-      * Create and populate the `.env` file as described above.
-4.  **Start the React development server**:
+      * Create and populate the `.env` file from `sample.env`.
+4.  **Start the Expo server**:
     ```bash
-    npm start
+    npx expo start
     ```
-
-**Note**: The frontend makes API requests to `http://localhost:3001`. Ensure the backend server is running on this port.
+5.  **Run on a device**:
+    *   Scan the QR code with your camera or the **Expo Go** app to run on your phone.
+    *   Press `i` for iOS simulator or `a` for Android emulator.
+    *   Press `w` for web version.
 
 -----
 
 ## API Endpoints
 
-The backend provides the following API endpoints for the historical data view:
+The backend provides the following API endpoints:
 
-  * `GET /api/tracks`: Returns a list of the user's top tracks, grouped by month and year.
-  * `GET /api/artists`: Returns a list of the user's top artists, grouped by month and year.
-  * `GET /api/albums`: Returns a list of the user's top albums, grouped by month and year.
-
------
-
-## Database Schema
-
-The database consists of three tables:
-
-  * **albums**: Stores information about albums, including `album_id`, `name`, `album_type`, and `release_date`.
-  * **artists**: Stores information about artists, including `artist_id`, `name`, `genres`, and `popularity`.
-  * **tracks**: Stores information about tracks, including `track_id`, `name`, `album_id`, `artist_ids`, and `popularity`.
+  * `GET /api/tracks`: Returns user's top tracks grouped by month/year.
+  * `GET /api/artists`: Returns user's top artists grouped by month/year.
+  * `GET /api/albums`: Returns user's top albums grouped by month/year.
+  * `GET /api/analytics/...`: Advanced analytics endpoints (Dominance, Loyalty, Churn).
 
 -----
 
