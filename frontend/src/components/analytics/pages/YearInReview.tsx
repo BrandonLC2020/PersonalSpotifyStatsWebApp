@@ -45,7 +45,7 @@ const YearInReview: React.FC<Props> = ({ spotifyApi }) => {
   const year = parseInt(yearParam || '2025', 10);
 
   const { tracks, artists, albums, allMonths, loading, error } = useAnalyticsData();
-  const { fetchFeatures } = useAudioFeatures(spotifyApi);
+  const { fetchFeatures, error: audioError } = useAudioFeatures(spotifyApi);
   const [valenceArc, setValenceArc] = useState<{ month: string; valence: number }[]>([]);
   const [topArtistImage, setTopArtistImage] = useState<string>('');
 
@@ -118,8 +118,10 @@ const YearInReview: React.FC<Props> = ({ spotifyApi }) => {
     }
   }, [summary]);
 
-  // Fetch valence arc
+  // Fetch valence arc (skip if audio features deprecated)
   useEffect(() => {
+    if (audioError === 'DEPRECATED') return;
+
     const load = async () => {
       const monthlyValences: { month: string; valence: number }[] = [];
 
@@ -139,7 +141,7 @@ const YearInReview: React.FC<Props> = ({ spotifyApi }) => {
     };
 
     if (yearTracks.length > 0) load();
-  }, [yearTracks, fetchFeatures]);
+  }, [yearTracks, fetchFeatures, audioError]);
 
   if (loading) {
     return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}><CircularProgress size={48} /></Box>;

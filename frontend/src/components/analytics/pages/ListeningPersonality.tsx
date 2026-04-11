@@ -32,7 +32,7 @@ const ListeningPersonality: React.FC<Props> = ({ tracks, artists, spotifyApi, co
   const theme = useTheme();
   const mode = theme.palette.mode as 'light' | 'dark';
   const cardRef = React.useRef<HTMLDivElement>(null);
-  const { fetchFeatures } = useAudioFeatures(spotifyApi);
+  const { fetchFeatures, error: audioError } = useAudioFeatures(spotifyApi);
   const [personality, setPersonality] = useState<PersonalityResult | null>(null);
   const [revealed, setRevealed] = useState(false);
 
@@ -55,19 +55,23 @@ const ListeningPersonality: React.FC<Props> = ({ tracks, artists, spotifyApi, co
       const allPops = tracks.flatMap(g => g.records.map(t => t.popularity)).filter(p => p > 0);
       const avgPop = allPops.length > 0 ? allPops.reduce((a, b) => a + b, 0) / allPops.length : 50;
 
-      // 4. Audio features
-      const allTrackIds = Array.from(new Set(tracks.flatMap(g => g.records.map(t => t.track_id))));
-      const features = await fetchFeatures(allTrackIds.slice(0, 200));
-      const avgProfile = computeAudioProfileAvg(features);
+      // 4. Audio features (skip if deprecated)
+      let avgProfile: ReturnType<typeof computeAudioProfileAvg> = null;
+      let valenceVariance = 0;
 
-      // 5. Valence variance
-      const valences = features.map(f => f.valence);
-      const meanValence = valences.length > 0 ? valences.reduce((a, b) => a + b, 0) / valences.length : 0.5;
-      const valenceVariance = valences.length > 0
-        ? valences.reduce((sum, v) => sum + Math.pow(v - meanValence, 2), 0) / valences.length
-        : 0;
+      if (audioError !== 'DEPRECATED') {
+        const allTrackIds = Array.from(new Set(tracks.flatMap(g => g.records.map(t => t.track_id))));
+        const features = await fetchFeatures(allTrackIds.slice(0, 200));
+        avgProfile = computeAudioProfileAvg(features);
 
-      // Scoring
+        const valences = features.map(f => f.valence);
+        const meanValence = valences.length > 0 ? valences.reduce((a, b) => a + b, 0) / valences.length : 0.5;
+        valenceVariance = valences.length > 0
+          ? valences.reduce((sum, v) => sum + Math.pow(v - meanValence, 2), 0) / valences.length
+          : 0;
+      }
+
+      // Scoring — only include audio-dependent types if audio data is available
       const scores: { type: PersonalityType; score: number; stats: { label: string; value: string }[] }[] = [
         {
           type: 'The Loyalist',
@@ -89,27 +93,33 @@ const ListeningPersonality: React.FC<Props> = ({ tracks, artists, spotifyApi, co
           score: (avgPop < 40 && avgDiversity > 2.5) ? 100 : (avgPop < 50 ? 50 : 15),
           stats: [{ label: 'Avg Popularity', value: Math.round(avgPop).toString() }, { label: 'Diversity', value: avgDiversity.toFixed(1) }],
         },
-        {
-          type: 'The Mood Rider',
-          score: valenceVariance > 0.05 ? 100 : valenceVariance > 0.03 ? 60 : 20,
-          stats: [{ label: 'Mood Variance', value: (valenceVariance * 100).toFixed(1) }],
-        },
-        {
-          type: 'The Energizer',
-          score: (avgProfile?.energy ?? 0) > 0.7 ? 100 : (avgProfile?.energy ?? 0) > 0.55 ? 60 : 20,
-          stats: [{ label: 'Avg Energy', value: `${Math.round((avgProfile?.energy ?? 0) * 100)}%` }],
-        },
-        {
-          type: 'The Night Owl',
-          score: ((avgProfile?.acousticness ?? 0) > 0.4 && (avgProfile?.energy ?? 0) < 0.45) ? 100 : 20,
-          stats: [{ label: 'Acousticness', value: `${Math.round((avgProfile?.acousticness ?? 0) * 100)}%` }],
-        },
-        {
-          type: 'The Groove Master',
-          score: (avgProfile?.danceability ?? 0) > 0.7 ? 100 : (avgProfile?.danceability ?? 0) > 0.55 ? 60 : 20,
-          stats: [{ label: 'Danceability', value: `${Math.round((avgProfile?.danceability ?? 0) * 100)}%` }],
-        },
       ];
+
+      // Only add audio-dependent personality types if audio data is available
+      if (avgProfile) {
+        scores.push(
+          {
+            type: 'The Mood Rider',
+            score: valenceVariance > 0.05 ? 100 : valenceVariance > 0.03 ? 60 : 20,
+            stats: [{ label: 'Mood Variance', value: (valenceVariance * 100).toFixed(1) }],
+          },
+          {
+            type: 'The Energizer',
+            score: (avgProfile?.energy ?? 0) > 0.7 ? 100 : (avgProfile?.energy ?? 0) > 0.55 ? 60 : 20,
+            stats: [{ label: 'Avg Energy', value: `${Math.round((avgProfile?.energy ?? 0) * 100)}%` }],
+          },
+          {
+            type: 'The Night Owl',
+            score: ((avgProfile?.acousticness ?? 0) > 0.4 && (avgProfile?.energy ?? 0) < 0.45) ? 100 : 20,
+            stats: [{ label: 'Acousticness', value: `${Math.round((avgProfile?.acousticness ?? 0) * 100)}%` }],
+          },
+          {
+            type: 'The Groove Master',
+            score: (avgProfile?.danceability ?? 0) > 0.7 ? 100 : (avgProfile?.danceability ?? 0) > 0.55 ? 60 : 20,
+            stats: [{ label: 'Danceability', value: `${Math.round((avgProfile?.danceability ?? 0) * 100)}%` }],
+          },
+        );
+      }
 
       scores.sort((a, b) => b.score - a.score);
       const primary = scores[0];
@@ -127,7 +137,7 @@ const ListeningPersonality: React.FC<Props> = ({ tracks, artists, spotifyApi, co
     };
 
     compute();
-  }, [tracks, artists, fetchFeatures]);
+  }, [tracks, artists, fetchFeatures, audioError]);
 
   const handleShare = async () => {
     if (!cardRef.current) return;

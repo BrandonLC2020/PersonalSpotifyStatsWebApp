@@ -74,8 +74,16 @@ class Api::AnalyticsController < ApplicationController
     # Build album release date lookup
     album_dates = Album.pluck(:album_id, :release_date).to_h
 
-    response_data = grouped.map do |(year, month), month_tracks|
-      reference_date = Date.new(year, month, 1)
+    response_data = grouped.filter_map do |(year, month), month_tracks|
+      # Skip records with nil or non-numeric year/month
+      next unless year.is_a?(Integer) && month.is_a?(Integer)
+
+      begin
+        reference_date = Date.new(year, month, 1)
+      rescue ArgumentError, TypeError
+        next
+      end
+
       new_count = 0
       recent_count = 0
       catalog_count = 0
@@ -85,6 +93,8 @@ class Api::AnalyticsController < ApplicationController
         next unless release_str.present?
 
         begin
+          release_str = release_str.to_s if release_str.is_a?(Date)
+
           # Handle various Spotify date formats: "2024-01-15", "2024-01", "2024"
           release_date = case release_str.length
                          when 4 then Date.new(release_str.to_i, 1, 1)
@@ -101,7 +111,7 @@ class Api::AnalyticsController < ApplicationController
           else
             catalog_count += 1
           end
-        rescue Date::Error
+        rescue Date::Error, TypeError, ArgumentError
           catalog_count += 1 # default to catalog if date can't be parsed
         end
       end

@@ -154,10 +154,13 @@ function AppContent() {
               </ToggleButton>
             </ToggleButtonGroup>
             {showViewToggle && (
-              <IconButton onClick={handleViewChange} color="inherit">
+              <IconButton onClick={handleViewChange} color="inherit" sx={{ ml: 1 }}>
                 {viewMode === 'table' ? <ViewModuleIcon /> : <ViewListIcon />}
               </IconButton>
             )}
+            <IconButton onClick={toggleColorMode} color="inherit" sx={{ ml: 1 }}>
+              {theme.palette.mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+            </IconButton>
           </Toolbar>
           {showEntityTabs && (
             <Tabs
@@ -176,11 +179,7 @@ function AppContent() {
         </AppBar>
 
         <Container component="main" sx={{ flexGrow: 1, py: 4 }} maxWidth={activeSection === 'analytics' ? 'xl' : 'lg'}>
-          <Box sx={{ textAlign: 'center', mb: 2 }}>
-            <IconButton sx={{ ml: 1 }} onClick={toggleColorMode} color="inherit">
-              {theme.palette.mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
-            </IconButton>
-          </Box>
+
           {renderContent()}
         </Container>
       </Box>

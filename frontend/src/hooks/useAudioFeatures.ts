@@ -2,6 +2,14 @@ import { useState, useCallback, useRef } from 'react';
 import SpotifyWebApi from 'spotify-web-api-js';
 import { AudioFeatures } from '../types';
 
+// Custom error for deprecated audio-features endpoint
+class AudioFeaturesDeprecatedError extends Error {
+  constructor() {
+    super('Spotify Audio Features API has been deprecated');
+    this.name = 'AudioFeaturesDeprecatedError';
+  }
+}
+
 // In-memory cache shared across hook instances
 const audioFeaturesCache = new Map<string, AudioFeatures>();
 
@@ -76,6 +84,10 @@ const useAudioFeatures = (
               }
             }
           } catch (chunkErr: any) {
+            // If forbidden (403), the audio-features endpoint is deprecated
+            if (chunkErr?.status === 403) {
+              throw new AudioFeaturesDeprecatedError();
+            }
             // If rate limited, wait and retry
             if (chunkErr?.status === 429) {
               const retryAfter = parseInt(chunkErr.headers?.['retry-after'] || '2', 10);
@@ -96,8 +108,13 @@ const useAudioFeatures = (
         setFeatures(allFeatures);
         return allFeatures;
       } catch (err: any) {
-        console.error('Failed to fetch audio features:', err);
-        setError('Failed to fetch audio features from Spotify.');
+        if (err instanceof AudioFeaturesDeprecatedError) {
+          console.warn('Spotify Audio Features API is no longer available (deprecated Nov 2024).');
+          setError('DEPRECATED');
+        } else {
+          console.error('Failed to fetch audio features:', err);
+          setError('Failed to fetch audio features from Spotify.');
+        }
         return [];
       } finally {
         setLoading(false);

@@ -25,7 +25,7 @@ const getMoodColor = (valence: number, energy: number): string => {
 const MoodTimeline: React.FC<Props> = ({ tracks, spotifyApi }) => {
   const theme = useTheme();
   const mode = theme.palette.mode;
-  const { fetchFeatures, loading } = useAudioFeatures(spotifyApi);
+  const { fetchFeatures, loading, error: audioError } = useAudioFeatures(spotifyApi);
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
   const [moodData, setMoodData] = useState<MoodDataPoint[]>([]);
 
@@ -42,6 +42,8 @@ const MoodTimeline: React.FC<Props> = ({ tracks, spotifyApi }) => {
   }, [tracks]);
 
   useEffect(() => {
+    if (audioError === 'DEPRECATED') return;
+
     const load = async () => {
       let relevantTracks: Track[];
 
@@ -71,7 +73,7 @@ const MoodTimeline: React.FC<Props> = ({ tracks, spotifyApi }) => {
     };
 
     load();
-  }, [selectedMonth, tracks, fetchFeatures]);
+  }, [selectedMonth, tracks, fetchFeatures, audioError]);
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (!active || !payload?.length) return null;
@@ -101,6 +103,16 @@ const MoodTimeline: React.FC<Props> = ({ tracks, spotifyApi }) => {
 
   return (
     <Box>
+      {audioError === 'DEPRECATED' ? (
+        <Box sx={{ textAlign: 'center', py: 4 }}>
+          <Typography variant="h6" sx={{ mb: 1 }}>🚫 Mood Data Unavailable</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Spotify has deprecated the Audio Features API as of November 2024.
+            Mood mapping requires audio feature data that is no longer accessible.
+          </Typography>
+        </Box>
+      ) : (
+      <>
       <Box sx={{ mb: 2, display: 'flex', justifyContent: 'center' }}>
         <FormControl size="small" sx={{ minWidth: 160 }}>
           <InputLabel>Month</InputLabel>
@@ -192,6 +204,8 @@ const MoodTimeline: React.FC<Props> = ({ tracks, spotifyApi }) => {
           <Typography variant="caption" sx={{ color: MOOD_COLORS.happyEnergetic, opacity: 0.7 }}>🎉 Happy & Energetic</Typography>
         </Box>
       </Box>
+      </>
+      )}
     </Box>
   );
 };

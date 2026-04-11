@@ -28,7 +28,7 @@ const RADAR_AXES = [
 const AudioProfileRadar: React.FC<Props> = ({ tracks, spotifyApi }) => {
   const theme = useTheme();
   const mode = theme.palette.mode;
-  const { fetchFeatures, loading } = useAudioFeatures(spotifyApi);
+  const { fetchFeatures, loading, error: audioError } = useAudioFeatures(spotifyApi);
   const [selectedMonth1, setSelectedMonth1] = useState<string>('all');
   const [selectedMonth2, setSelectedMonth2] = useState<string>('none');
   const [radarData1, setRadarData1] = useState<any[]>([]);
@@ -49,6 +49,8 @@ const AudioProfileRadar: React.FC<Props> = ({ tracks, spotifyApi }) => {
 
   // Fetch features for selected months
   useEffect(() => {
+    if (audioError === 'DEPRECATED') return;
+
     const fetchForMonth = async (monthKey: string, setData: (d: any[]) => void) => {
       let trackIds: string[];
 
@@ -75,7 +77,7 @@ const AudioProfileRadar: React.FC<Props> = ({ tracks, spotifyApi }) => {
 
     fetchForMonth(selectedMonth1, setRadarData1);
     fetchForMonth(selectedMonth2, setRadarData2);
-  }, [selectedMonth1, selectedMonth2, tracks, fetchFeatures]);
+  }, [selectedMonth1, selectedMonth2, tracks, fetchFeatures, audioError]);
 
   // Merge data for dual radar
   const chartData = useMemo(() => {
@@ -91,6 +93,16 @@ const AudioProfileRadar: React.FC<Props> = ({ tracks, spotifyApi }) => {
 
   return (
     <Box>
+      {audioError === 'DEPRECATED' ? (
+        <Box sx={{ textAlign: 'center', py: 4 }}>
+          <Typography variant="h6" sx={{ mb: 1 }}>🚫 Audio Features Unavailable</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Spotify has deprecated the Audio Features API as of November 2024.
+            This chart requires audio feature data that is no longer accessible.
+          </Typography>
+        </Box>
+      ) : (
+      <>
       <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', justifyContent: 'center' }}>
         <FormControl size="small" sx={{ minWidth: 160 }}>
           <InputLabel>Primary Month</InputLabel>
@@ -171,6 +183,8 @@ const AudioProfileRadar: React.FC<Props> = ({ tracks, spotifyApi }) => {
             />
           </RadarChart>
         </ResponsiveContainer>
+      )}
+      </>
       )}
     </Box>
   );

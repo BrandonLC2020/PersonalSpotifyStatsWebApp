@@ -19,7 +19,7 @@ const MusicDNACard: React.FC<Props> = ({ tracks, artists, albums, spotifyApi }) 
   const theme = useTheme();
   const mode = theme.palette.mode;
   const cardRef = useRef<HTMLDivElement>(null);
-  const { fetchFeatures } = useAudioFeatures(spotifyApi);
+  const { fetchFeatures, error: audioError } = useAudioFeatures(spotifyApi);
   const [avgEnergy, setAvgEnergy] = useState<number | null>(null);
   const [avgDanceability, setAvgDanceability] = useState<number | null>(null);
   const [avgValence, setAvgValence] = useState<number | null>(null);
@@ -62,6 +62,8 @@ const MusicDNACard: React.FC<Props> = ({ tracks, artists, albums, spotifyApi }) 
 
   // Fetch audio features for DNA stats
   useEffect(() => {
+    if (audioError === 'DEPRECATED') return;
+
     const load = async () => {
       const allTrackIds = Array.from(new Set(tracks.flatMap(g => g.records.map(t => t.track_id))));
       if (allTrackIds.length === 0) return;
@@ -75,7 +77,7 @@ const MusicDNACard: React.FC<Props> = ({ tracks, artists, albums, spotifyApi }) 
       }
     };
     load();
-  }, [tracks, fetchFeatures]);
+  }, [tracks, fetchFeatures, audioError]);
 
   const handleShare = async () => {
     if (!cardRef.current) return;
@@ -175,11 +177,19 @@ const MusicDNACard: React.FC<Props> = ({ tracks, artists, albums, spotifyApi }) 
       </Box>
 
       {/* Audio meters */}
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-        <Meter label="Energy" value={avgEnergy} />
-        <Meter label="Danceability" value={avgDanceability} />
-        <Meter label="Happiness" value={avgValence} />
-      </Box>
+      {audioError === 'DEPRECATED' ? (
+        <Box sx={{ textAlign: 'center', py: 1 }}>
+          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>
+            Audio metrics unavailable — Spotify deprecated this API
+          </Typography>
+        </Box>
+      ) : (
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+          <Meter label="Energy" value={avgEnergy} />
+          <Meter label="Danceability" value={avgDanceability} />
+          <Meter label="Happiness" value={avgValence} />
+        </Box>
+      )}
     </Paper>
   );
 };
