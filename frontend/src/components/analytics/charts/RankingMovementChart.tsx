@@ -1,12 +1,14 @@
 import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet, Dimensions, Platform, TextInput } from 'react-native';
 import { SegmentedButtons, useTheme, Text } from 'react-native-paper';
-import { VictoryChart, VictoryLine, VictoryAxis, VictoryTheme, VictoryLegend, VictoryVoronoiContainer, VictoryTooltip } from 'victory-native';
+import { CartesianChart, Line, useChartPressState } from 'victory-native';
+import Animated, { useAnimatedProps } from 'react-native-reanimated';
 import { GroupedRecords, Track, Artist } from '../../../types';
 import { computeRankingTimeline } from '../../../utils/analyticsUtils';
 import { CHART_COLORS } from '../../../utils/chartTheme';
 
 const { width } = Dimensions.get('window');
+const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
 interface Props {
   tracks: GroupedRecords<Track>[];
@@ -16,12 +18,19 @@ interface Props {
 const RankingMovementChart: React.FC<Props> = ({ tracks, artists }) => {
   const theme = useTheme();
   const [entityType, setEntityType] = useState<'tracks' | 'artists'>('tracks');
+  const { state, isActive } = useChartPressState({ x: "", y: {} });
 
   const { data, entities } = useMemo(() => {
     const source = entityType === 'tracks' ? tracks : artists;
     const idField = entityType === 'tracks' ? 'track_id' : 'artist_id';
     return computeRankingTimeline(source as any, 5, idField); // Limit to top 5 for mobile clarity
   }, [tracks, artists, entityType]);
+
+  const tooltipTextProps = useAnimatedProps(() => {
+    return {
+      text: `Month: ${state.x.value.value}`,
+    } as any;
+  });
 
   if (data.length === 0) {
     return (
@@ -31,15 +40,8 @@ const RankingMovementChart: React.FC<Props> = ({ tracks, artists }) => {
     );
   }
 
-  // Transform data for Victory (VictoryLine expects array of { x, y })
-  const seriesData = entities.slice(0, 5).map(name => ({
-    name,
-    data: data.map(d => ({
-      x: d.month,
-      y: d[name] || null,
-      entity: name
-    })).filter(d => d.y !== null)
-  }));
+  // Ensure we only use top 5 entities
+  const topEntities = entities.slice(0, 5);
 
   return (
     <View style={styles.container}>
@@ -53,48 +55,57 @@ const RankingMovementChart: React.FC<Props> = ({ tracks, artists }) => {
         style={styles.toggle}
       />
 
-      <VictoryChart
-        theme={VictoryTheme.material}
-        width={width - 32}
-        height={300}
-        padding={{ top: 20, bottom: 50, left: 40, right: 20 }}
-        containerComponent={
-          <VictoryVoronoiContainer
-            labels={({ datum }) => `${datum.entity}: ${datum.y}`}
-            labelComponent={<VictoryTooltip />}
-          />
-        }
-      >
-        <VictoryAxis
-          style={{
-            tickLabels: { fontSize: 8, padding: 5, fill: theme.colors.onSurfaceVariant },
+      <View style={{ height: 300 }}>
+        <CartesianChart
+          data={data}
+          xKey="month"
+          yKeys={topEntities as any}
+          padding={{ top: 20, bottom: 5, left: 20, right: 20 }}
+          domain={{ y: [10, 1] }}
+          axisOptions={{
+            tickCount: 5,
+            labelColor: theme.colors.onSurfaceVariant as string,
+            labelOffset: 4,
+            lineColor: theme.colors.outlineVariant as string,
+            labelPosition: "outset",
+            formatXLabel: (label) => label,
+            formatYLabel: (label: string | number) => Math.round(Number(label)).toString(),
           }}
-          fixLabelOverlap
-        />
-        <VictoryAxis
-          dependentAxis
-          invertAxis
-          domain={[1, 10]}
-          style={{
-            tickLabels: { fontSize: 10, fill: theme.colors.onSurfaceVariant },
-          }}
-        />
-        {seriesData.map((series, i) => (
-          <VictoryLine
-            key={series.name}
-            data={series.data}
-            style={{
-              data: { stroke: CHART_COLORS[i % CHART_COLORS.length], strokeWidth: 2 }
-            }}
-          />
-        ))}
-      </VictoryChart>
+          chartPressState={state}
+        >
+          {({ points, chartBounds }) => (
+            <>
+              {topEntities.map((entity, i) => (
+                <Line
+                  key={entity}
+                  points={(points as any)[entity]}
+                  color={CHART_COLORS[i % CHART_COLORS.length]}
+                  strokeWidth={3}
+                  curveType="monotoneX"
+                  animate={{ type: "timing", duration: 300 }}
+                />
+              ))}
+            </>
+          )}
+        </CartesianChart>
+
+        {isActive && (
+          <View pointerEvents="none" style={[styles.tooltipContainer, { backgroundColor: theme.colors.surfaceVariant }]}>
+            <AnimatedTextInput
+              editable={false}
+              underlineColorAndroid="transparent"
+              style={[styles.tooltipText, { color: theme.colors.onSurface }]}
+              animatedProps={tooltipTextProps}
+            />
+          </View>
+        )}
+      </View>
       
       <View style={styles.legendContainer}>
-        {seriesData.map((series, i) => (
-            <View key={series.name} style={styles.legendItem}>
+        {topEntities.map((name, i) => (
+            <View key={name} style={styles.legendItem}>
                 <View style={[styles.colorDot, { backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }]} />
-                <Text variant="labelSmall" numberOfLines={1} style={styles.legendText}>{series.name}</Text>
+                <Text variant="labelSmall" numberOfLines={1} style={styles.legendText}>{name}</Text>
             </View>
         ))}
       </View>
@@ -135,6 +146,30 @@ const styles = StyleSheet.create({
   },
   legendText: {
       maxWidth: 100,
+  },
+  tooltipText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  tooltipContainer: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    padding: 8,
+    borderRadius: 8,
+    ...Platform.select({
+      web: {
+        // @ts-ignore - Web specific
+        boxShadow: '0px 2px 4px rgba(0,0,0,0.1)',
+      },
+      default: {
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      }
+    })
   }
 });
 

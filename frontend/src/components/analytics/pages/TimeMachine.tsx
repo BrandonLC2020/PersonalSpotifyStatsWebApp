@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Dimensions, Image } from 'react-native';
 import { Text, Card, Title, Paragraph, List, Avatar, Chip, ActivityIndicator, useTheme } from 'react-native-paper';
-import { VictoryPie, VictoryTooltip } from 'victory-native';
+import { PolarChart, Pie } from 'victory-native';
 import SpotifyWebApi from 'spotify-web-api-js';
 import useAnalyticsData from '../../../hooks/useAnalyticsData';
 import { CHART_COLORS, getMonthLabel } from '../../../utils/chartTheme';
@@ -80,7 +80,11 @@ const TimeMachine: React.FC<Props> = ({ spotifyApi }) => {
     return Array.from(counts.entries())
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
-      .map(([x, y]) => ({ x, y }));
+      .map(([label, value], i) => ({ 
+          label, 
+          value,
+          color: CHART_COLORS[i % CHART_COLORS.length]
+      }));
   }, [selectedData]);
 
   if (loading) return <ActivityIndicator style={styles.centered} />;
@@ -130,15 +134,27 @@ const TimeMachine: React.FC<Props> = ({ spotifyApi }) => {
 
         {genrePieData.length > 0 && (
           <View style={styles.chartContainer}>
-            <Text variant="titleSmall">Genre Breakdown</Text>
-            <VictoryPie
-              data={genrePieData}
-              colorScale={CHART_COLORS}
-              width={width - 64}
-              height={200}
-              innerRadius={40}
-              style={{ labels: { fontSize: 10, fill: theme.colors.onSurface } }}
-            />
+            <Text variant="titleSmall" style={{ marginBottom: 16 }}>Genre Breakdown</Text>
+            <View style={{ height: 200, width: width - 64 }}>
+                <PolarChart
+                    data={genrePieData}
+                    labelKey="label"
+                    valueKey="value"
+                    colorKey="color"
+                >
+                    <Pie.Chart 
+                        innerRadius={40}
+                    />
+                </PolarChart>
+            </View>
+            <View style={styles.legendContainer}>
+                {genrePieData.map((d, i) => (
+                    <View key={d.label} style={styles.legendItem}>
+                        <View style={[styles.colorDot, { backgroundColor: d.color }]} />
+                        <Text variant="labelSmall">{d.label}</Text>
+                    </View>
+                ))}
+            </View>
           </View>
         )}
       </View>
@@ -186,7 +202,7 @@ const TimeMachine: React.FC<Props> = ({ spotifyApi }) => {
             </Card.Content>
         </Card>
         
-        {compareMode && comparisonData && (
+        {compareMode && comparisonMonth && comparisonData && (
              <Card style={[styles.snapshotCard, { marginTop: 16 }]}>
                 <Card.Content>
                     <MonthSnapshot data={comparisonData} label={comparisonData?.label || ''} />
@@ -243,6 +259,24 @@ const styles = StyleSheet.create({
   chartContainer: {
     alignItems: 'center',
     marginTop: 16,
+  },
+  legendContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      marginTop: 16,
+  },
+  legendItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginHorizontal: 8,
+      marginBottom: 4,
+  },
+  colorDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      marginRight: 4,
   }
 });
 

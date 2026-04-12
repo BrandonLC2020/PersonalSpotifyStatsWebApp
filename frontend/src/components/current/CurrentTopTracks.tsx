@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, FlatList, Image, TouchableOpacity, Linking } from 'react-native';
 import { Text, ActivityIndicator, useTheme, Card, Avatar } from 'react-native-paper';
 import SpotifyWebApi from 'spotify-web-api-js';
-import useSpotifyWeb from '../hooks/useSpotifyWeb';
+import useSpotifyWeb from '../../hooks/useSpotifyWeb';
 
 interface Track {
   id: string;

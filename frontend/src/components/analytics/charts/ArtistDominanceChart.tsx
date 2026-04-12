@@ -1,11 +1,13 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet, Dimensions, Platform, TextInput } from 'react-native';
 import { useTheme, Text, ActivityIndicator } from 'react-native-paper';
-import { VictoryChart, VictoryBar, VictoryAxis, VictoryTheme, VictoryStack, VictoryVoronoiContainer, VictoryTooltip } from 'victory-native';
+import { CartesianChart, StackedBar, useChartPressState } from 'victory-native';
+import Animated, { useAnimatedProps } from 'react-native-reanimated';
 import { useArtistTrackDominance } from '../../../hooks/useAnalyticsApi';
 import { CHART_COLORS } from '../../../utils/chartTheme';
 
 const { width } = Dimensions.get('window');
+const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
 const ArtistDominanceChart: React.FC = () => {
   const theme = useTheme();
@@ -45,47 +47,60 @@ const ArtistDominanceChart: React.FC = () => {
     return { chartData: formattedData, topArtists: [...artistsList, 'Other'] };
   }, [data]);
 
+  const { state, isActive } = useChartPressState({ 
+      x: "", 
+      y: Object.fromEntries(topArtists.map(a => [a, 0])) 
+  });
+
+  const tooltipTextProps = useAnimatedProps(() => {
+    return {
+      text: `${state.x.value.value} Dominance`,
+    } as any;
+  });
+
   if (loading) return <View style={styles.centered}><ActivityIndicator /></View>;
   if (error) return <View style={styles.centered}><Text style={{ color: theme.colors.error }}>{error}</Text></View>;
   if (!data || data.length === 0) return null;
 
   return (
     <View style={styles.container}>
-      <VictoryChart
-        theme={VictoryTheme.material}
-        width={width - 32}
-        height={300}
-        padding={{ top: 20, bottom: 50, left: 40, right: 20 }}
-        containerComponent={
-          <VictoryVoronoiContainer
-            labels={({ datum }) => `${datum._group}: ${datum.y}`}
-            labelComponent={<VictoryTooltip />}
-          />
-        }
-      >
-        <VictoryAxis
-          style={{
-            tickLabels: { fontSize: 8, padding: 5, fill: theme.colors.onSurfaceVariant },
+      <View style={{ height: 300 }}>
+        <CartesianChart
+          data={chartData}
+          xKey="month"
+          yKeys={topArtists as any}
+          padding={{ top: 20, bottom: 5, left: 10, right: 10 }}
+          axisOptions={{
+            labelColor: theme.colors.onSurfaceVariant as string,
+            lineColor: theme.colors.outlineVariant as string,
+            formatXLabel: (label) => label,
           }}
-          fixLabelOverlap
-        />
-        <VictoryAxis
-          dependentAxis
-          style={{
-            tickLabels: { fontSize: 10, fill: theme.colors.onSurfaceVariant },
-          }}
-        />
-        
-        <VictoryStack colorScale={[...CHART_COLORS, "#666"]}>
-          {topArtists.map((artist) => (
-            <VictoryBar
-              key={artist}
-              name={artist}
-              data={chartData.map(d => ({ x: d.month, y: d[artist] || 0 }))}
+          chartPressState={state}
+        >
+          {({ points, chartBounds }) => (
+            <>
+              <StackedBar
+                points={topArtists.map(a => points[a])}
+                chartBounds={chartBounds}
+                colors={[...CHART_COLORS.slice(0, 5), "#666"]}
+                barWidth={20}
+                animate={{ type: "timing", duration: 300 }}
+              />
+            </>
+          )}
+        </CartesianChart>
+
+        {isActive && (
+          <View pointerEvents="none" style={[styles.tooltipContainer, { backgroundColor: theme.colors.surfaceVariant }]}>
+            <AnimatedTextInput
+              editable={false}
+              underlineColorAndroid="transparent"
+              style={[styles.tooltipText, { color: theme.colors.onSurface }]}
+              animatedProps={tooltipTextProps}
             />
-          ))}
-        </VictoryStack>
-      </VictoryChart>
+          </View>
+        )}
+      </View>
 
        <View style={styles.legendContainer}>
         {topArtists.map((artist, i) => (
@@ -126,6 +141,30 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginRight: 4,
   },
+  tooltipText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  tooltipContainer: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    padding: 8,
+    borderRadius: 8,
+    ...Platform.select({
+      web: {
+        // @ts-ignore - Web specific
+        boxShadow: '0px 2px 4px rgba(0,0,0,0.1)',
+      },
+      default: {
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      }
+    })
+  }
 });
 
 export default ArtistDominanceChart;

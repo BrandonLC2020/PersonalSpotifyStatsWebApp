@@ -1,12 +1,14 @@
 import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, Dimensions, Image, ScrollView } from 'react-native';
-import { useTheme, Text, SegmentedButtons, DataTable, Avatar } from 'react-native-paper';
-import { VictoryChart, VictoryBar, VictoryAxis, VictoryTheme, VictoryTooltip, VictoryVoronoiContainer, VictoryLine } from 'victory-native';
+import { View, StyleSheet, Dimensions, Image, ScrollView, Platform, TextInput } from 'react-native';
+import { useTheme, Text, SegmentedButtons, DataTable, Avatar, ActivityIndicator } from 'react-native-paper';
+import { CartesianChart, StackedBar, Line, useChartPressState } from 'victory-native';
+import Animated, { useAnimatedProps } from 'react-native-reanimated';
 import { GroupedRecords, Artist } from '../../../types';
 import { computeLoyaltyStats, computeEntityChurn } from '../../../utils/analyticsUtils';
 
 const { width } = Dimensions.get('window');
 const MEDAL_COLORS = ['#FFD700', '#C0C0C0', '#CD7F32'];
+const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
 interface Props {
   artists: GroupedRecords<Artist>[];
@@ -25,6 +27,17 @@ const ArtistLoyaltyDashboard: React.FC<Props> = ({ artists }) => {
     [artists]
   );
 
+  const { state, isActive } = useChartPressState({ 
+      x: "", 
+      y: { entered: 0, exited: 0, retained: 0 } 
+  });
+
+  const tooltipTextProps = useAnimatedProps(() => {
+    return {
+      text: `${state.x.value.value}: +${state.y.entered.value.value} | -${state.y.exited.value.value}`,
+    } as any;
+  });
+
   return (
     <View style={styles.container}>
       <SegmentedButtons
@@ -38,7 +51,7 @@ const ArtistLoyaltyDashboard: React.FC<Props> = ({ artists }) => {
       />
 
       {view === 'leaderboard' ? (
-        <ScrollView horizontal>
+        <ScrollView horizontal bounces={false}>
           <DataTable style={{ width: width * 1.2 }}>
             <DataTable.Header>
               <DataTable.Title style={styles.rankCol}>#</DataTable.Title>
@@ -77,47 +90,49 @@ const ArtistLoyaltyDashboard: React.FC<Props> = ({ artists }) => {
         </ScrollView>
       ) : (
         <View>
-          <VictoryChart
-            theme={VictoryTheme.material}
-            width={width - 32}
-            height={300}
-            padding={{ top: 20, bottom: 50, left: 40, right: 30 }}
-            containerComponent={
-              <VictoryVoronoiContainer
-                labels={({ datum }) => `${datum._group}: ${datum.y}`}
-                labelComponent={<VictoryTooltip />}
-              />
-            }
-          >
-            <VictoryAxis
-              style={{
-                tickLabels: { fontSize: 8, padding: 5, fill: theme.colors.onSurfaceVariant },
+          <View style={{ height: 300 }}>
+            <CartesianChart
+              data={churnData}
+              xKey="label"
+              yKeys={["entered", "exited", "retained"]}
+              padding={{ top: 20, bottom: 5, left: 10, right: 10 }}
+              axisOptions={{
+                labelColor: theme.colors.onSurfaceVariant as string,
+                lineColor: theme.colors.outlineVariant as string,
+                formatXLabel: (label) => label,
               }}
-              fixLabelOverlap
-            />
-            <VictoryAxis
-              dependentAxis
-              style={{
-                tickLabels: { fontSize: 10, fill: theme.colors.onSurfaceVariant },
-              }}
-            />
-            
-            <VictoryBar
-              name="Entered"
-              data={churnData.map(d => ({ x: d.month, y: d.entered }))}
-              style={{ data: { fill: "#1DB954" } }}
-            />
-            <VictoryBar
-              name="Exited"
-              data={churnData.map(d => ({ x: d.month, y: d.exited }))}
-              style={{ data: { fill: "#E91E63" } }}
-            />
-            <VictoryLine
-              name="Retained"
-              data={churnData.map(d => ({ x: d.month, y: d.retained }))}
-              style={{ data: { stroke: "#FF9800", strokeWidth: 2 } }}
-            />
-          </VictoryChart>
+              chartPressState={state}
+            >
+              {({ points, chartBounds }) => (
+                <>
+                  <StackedBar
+                    points={[points.entered, points.exited]}
+                    chartBounds={chartBounds}
+                    colors={["#1DB954", "#E91E63"]}
+                    barWidth={15}
+                    animate={{ type: "timing", duration: 300 }}
+                  />
+                  <Line
+                    points={points.retained}
+                    color="#FF9800"
+                    strokeWidth={3}
+                    animate={{ type: "timing", duration: 300 }}
+                  />
+                </>
+              )}
+            </CartesianChart>
+
+            {isActive && (
+              <View pointerEvents="none" style={[styles.tooltipContainer, { backgroundColor: theme.colors.surfaceVariant }]}>
+                <AnimatedTextInput
+                  editable={false}
+                  underlineColorAndroid="transparent"
+                  style={[styles.tooltipText, { color: theme.colors.onSurface }]}
+                  animatedProps={tooltipTextProps}
+                />
+              </View>
+            )}
+          </View>
 
           <View style={styles.legendContainer}>
             <View style={styles.legendItem}>
@@ -179,6 +194,30 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginRight: 4,
   },
+  tooltipText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  tooltipContainer: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    padding: 8,
+    borderRadius: 8,
+    ...Platform.select({
+      web: {
+        // @ts-ignore - Web specific
+        boxShadow: '0px 2px 4px rgba(0,0,0,0.1)',
+      },
+      default: {
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      }
+    })
+  }
 });
 
 export default ArtistLoyaltyDashboard;

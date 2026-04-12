@@ -1,11 +1,13 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet, Dimensions, Platform, TextInput } from 'react-native';
 import { useTheme, Text } from 'react-native-paper';
-import { VictoryChart, VictoryBar, VictoryLine, VictoryAxis, VictoryTheme, VictoryLegend, VictoryStack, VictoryVoronoiContainer, VictoryTooltip } from 'victory-native';
+import { CartesianChart, StackedBar, Line, useChartPressState } from 'victory-native';
+import Animated, { useAnimatedProps } from 'react-native-reanimated';
 import { GroupedRecords, Track } from '../../../types';
 import { computeExplicitRatio } from '../../../utils/analyticsUtils';
 
 const { width } = Dimensions.get('window');
+const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
 interface Props {
   tracks: GroupedRecords<Track>[];
@@ -14,7 +16,18 @@ interface Props {
 const ExplicitContentChart: React.FC<Props> = ({ tracks }) => {
   const theme = useTheme();
 
-  const data = useMemo(() => computeExplicitRatio(tracks), [tracks]);
+  const data = useMemo(() => computeExplicitRatio(tracks) as (Record<string, unknown> & { month: string; explicit: number; clean: number; explicitPercent: number })[], [tracks]);
+
+  const { state, isActive } = useChartPressState({ 
+    x: "", 
+    y: { explicit: 0, clean: 0, explicitPercent: 0 } 
+  });
+
+  const tooltipTextProps = useAnimatedProps(() => {
+    return {
+      text: `${state.x.value.value}: ${state.y.explicitPercent.value.value}% Explicit`,
+    } as any;
+  });
 
   if (data.length === 0) {
     return (
@@ -26,63 +39,49 @@ const ExplicitContentChart: React.FC<Props> = ({ tracks }) => {
 
   return (
     <View style={styles.container}>
-      <VictoryChart
-        theme={VictoryTheme.material}
-        width={width - 32}
-        height={300}
-        padding={{ top: 20, bottom: 50, left: 50, right: 50 }}
-        containerComponent={
-          <VictoryVoronoiContainer
-            labels={({ datum }) => `${datum.childName}: ${datum.y}${datum.childName === 'Explicit %' ? '%' : ''}`}
-            labelComponent={<VictoryTooltip />}
-          />
-        }
-      >
-        <VictoryAxis
-          style={{
-            tickLabels: { fontSize: 8, padding: 5, fill: theme.colors.onSurfaceVariant },
+      <View style={{ height: 300 }}>
+        <CartesianChart
+          data={data}
+          xKey="month"
+          yKeys={["explicit", "clean", "explicitPercent"]}
+          padding={{ top: 20, bottom: 5, left: 10, right: 10 }}
+          axisOptions={{
+            labelColor: theme.colors.onSurfaceVariant as string,
+            lineColor: theme.colors.outlineVariant as string,
+            formatXLabel: (label) => label,
           }}
-          fixLabelOverlap
-        />
-        <VictoryAxis
-          dependentAxis
-          style={{
-            tickLabels: { fontSize: 10, fill: theme.colors.onSurfaceVariant },
-            axisLabel: { fontSize: 10, padding: 30, fill: theme.colors.onSurfaceVariant }
-          }}
-          label="Track Count"
-        />
-        
-        <VictoryStack colorScale={["#E91E63", "#42A5F5"]}>
-          <VictoryBar
-            name="Explicit"
-            data={data.map(d => ({ x: d.month, y: d.explicit }))}
-          />
-          <VictoryBar
-            name="Clean"
-            data={data.map(d => ({ x: d.month, y: d.clean }))}
-          />
-        </VictoryStack>
+          chartPressState={state}
+        >
+          {({ points, chartBounds }) => (
+            <>
+              <StackedBar
+                points={[points.explicit, points.clean]}
+                chartBounds={chartBounds}
+                colors={["#E91E63", "#42A5F5"]}
+                barWidth={20}
+                animate={{ type: "timing", duration: 300 }}
+              />
+              <Line
+                points={points.explicitPercent}
+                color="#FF9800"
+                strokeWidth={3}
+                animate={{ type: "timing", duration: 300 }}
+              />
+            </>
+          )}
+        </CartesianChart>
 
-        <VictoryAxis
-          dependentAxis
-          orientation="right"
-          domain={[0, 100]}
-          style={{
-            tickLabels: { fontSize: 10, fill: "#FF9800" },
-            axisLabel: { fontSize: 10, padding: 35, fill: "#FF9800" }
-          }}
-          label="Explicit %"
-        />
-        
-        <VictoryLine
-          name="Explicit %"
-          data={data.map(d => ({ x: d.month, y: d.explicitPercent }))}
-          style={{
-            data: { stroke: "#FF9800", strokeWidth: 2 }
-          }}
-        />
-      </VictoryChart>
+        {isActive && (
+          <View pointerEvents="none" style={[styles.tooltipContainer, { backgroundColor: theme.colors.surfaceVariant }]}>
+            <AnimatedTextInput
+              editable={false}
+              underlineColorAndroid="transparent"
+              style={[styles.tooltipText, { color: theme.colors.onSurface }]}
+              animatedProps={tooltipTextProps}
+            />
+          </View>
+        )}
+      </View>
       
       <View style={styles.legendContainer}>
         <View style={styles.legendItem}>
@@ -127,6 +126,30 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginRight: 4,
   },
+  tooltipText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  tooltipContainer: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    padding: 8,
+    borderRadius: 8,
+    ...Platform.select({
+      web: {
+        // @ts-ignore - Web specific
+        boxShadow: '0px 2px 4px rgba(0,0,0,0.1)',
+      },
+      default: {
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      }
+    })
+  }
 });
 
 export default ExplicitContentChart;

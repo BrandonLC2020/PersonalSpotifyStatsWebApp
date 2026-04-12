@@ -4,7 +4,9 @@
     "strict": true,
     "baseUrl": ".",
     "paths": {
-      "@env": ["src/types/env.d.ts"]
+      "@env": [
+        "src/types/env.d.ts"
+      ]
     },
     "skipLibCheck": true,
     "moduleResolution": "bundler",
@@ -14,8 +16,6 @@
   },
   "include": [
     "**/*.ts",
-    "**/*.tsx",
-    ".expo/types/**/*.ts",
-    "expo-env.d.ts"
+    "**/*.tsx"
   ]
 }
