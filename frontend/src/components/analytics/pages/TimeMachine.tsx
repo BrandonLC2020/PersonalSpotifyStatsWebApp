@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Dimensions, Image } from 'react-native';
 import { Text, Card, Title, Paragraph, List, Avatar, Chip, ActivityIndicator, useTheme } from 'react-native-paper';
-import { PolarChart, Pie } from 'victory-native';
+import { VictoryPie } from 'victory-native';
 import SpotifyWebApi from 'spotify-web-api-js';
 import useAnalyticsData from '../../../hooks/useAnalyticsData';
 import { CHART_COLORS, getMonthLabel } from '../../../utils/chartTheme';
@@ -136,16 +136,16 @@ const TimeMachine: React.FC<Props> = ({ spotifyApi }) => {
           <View style={styles.chartContainer}>
             <Text variant="titleSmall" style={{ marginBottom: 16 }}>Genre Breakdown</Text>
             <View style={{ height: 200, width: width - 64 }}>
-                <PolarChart
-                    data={genrePieData}
-                    labelKey="label"
-                    valueKey="value"
-                    colorKey="color"
-                >
-                    <Pie.Chart 
-                        innerRadius={40}
-                    />
-                </PolarChart>
+                <VictoryPie
+                    data={genrePieData.map(d => ({ x: d.label, y: d.value }))}
+                    colorScale={genrePieData.map(d => d.color)}
+                    innerRadius={40}
+                    padding={40}
+                    labels={() => null}
+                    height={200}
+                    width={width - 64}
+                    animate={{ duration: 500 }}
+                />
             </View>
             <View style={styles.legendContainer}>
                 {genrePieData.map((d, i) => (
@@ -172,7 +172,9 @@ const TimeMachine: React.FC<Props> = ({ spotifyApi }) => {
                 <View key={year} style={styles.yearRow}>
                     <Text variant="labelSmall">{year}</Text>
                     <View style={styles.chipRow}>
-                        {months.map(m => (
+                        {months
+                        .sort((a, b) => b.month - a.month)
+                        .map(m => (
                         <Chip
                             key={m.key}
                             selected={selectedMonth === m.key || comparisonMonth === m.key}

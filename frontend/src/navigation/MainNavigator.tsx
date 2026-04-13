@@ -29,9 +29,7 @@ function TabNavigator({ spotifyApi }: { spotifyApi: any }) {
     >
       <Tab.Screen name="Current" component={CurrentSection} />
       <Tab.Screen name="Monthly" component={MonthlySection} />
-      <Tab.Screen name="Analytics">
-        {() => <AnalyticsDashboard spotifyApi={spotifyApi} />}
-      </Tab.Screen>
+      <Tab.Screen name="Analytics" component={AnalyticsDashboard} />
     </Tab.Navigator>
   );
 }

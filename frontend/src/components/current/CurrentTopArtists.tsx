@@ -20,16 +20,16 @@ const ArtistItem = ({ artist, index }: { artist: Artist; index: number }) => {
       <Card style={styles.card} mode="elevated">
         <Card.Title
           title={artist.name}
-          subtitle={artist.genres.slice(0, 2).join(', ')}
+          subtitle={artist.genres.length > 0 ? artist.genres.slice(0, 2).join(', ') : undefined}
           left={(props) => (
             <View style={styles.avatarContainer}>
-                <Image 
-                    source={{ uri: artist.images[0]?.url || 'https://via.placeholder.com/150' }} 
-                    style={styles.avatar}
-                />
-                <View style={styles.rankBadge}>
-                    <Text style={styles.rankText}>{index + 1}</Text>
-                </View>
+              <Image 
+                source={{ uri: artist.images[0]?.url || 'https://via.placeholder.com/150' }} 
+                style={styles.avatar}
+              />
+              <View style={styles.rankBadge}>
+                <Text style={styles.rankText}>{index + 1}</Text>
+              </View>
             </View>
           )}
         />

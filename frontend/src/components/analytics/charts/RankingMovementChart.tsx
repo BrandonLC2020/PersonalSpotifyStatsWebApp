@@ -1,14 +1,20 @@
 import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, Dimensions, Platform, TextInput } from 'react-native';
+import { View, StyleSheet, Dimensions } from 'react-native';
 import { SegmentedButtons, useTheme, Text } from 'react-native-paper';
-import { CartesianChart, Line, useChartPressState } from 'victory-native';
-import Animated, { useAnimatedProps } from 'react-native-reanimated';
+import { 
+  VictoryChart, 
+  VictoryLine, 
+  VictoryAxis, 
+  VictoryVoronoiContainer, 
+  VictoryTooltip,
+  VictoryScatter,
+  VictoryGroup
+} from 'victory-native';
 import { GroupedRecords, Track, Artist } from '../../../types';
 import { computeRankingTimeline } from '../../../utils/analyticsUtils';
 import { CHART_COLORS } from '../../../utils/chartTheme';
 
 const { width } = Dimensions.get('window');
-const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
 interface Props {
   tracks: GroupedRecords<Track>[];
@@ -18,19 +24,12 @@ interface Props {
 const RankingMovementChart: React.FC<Props> = ({ tracks, artists }) => {
   const theme = useTheme();
   const [entityType, setEntityType] = useState<'tracks' | 'artists'>('tracks');
-  const { state, isActive } = useChartPressState({ x: "", y: {} });
 
   const { data, entities } = useMemo(() => {
     const source = entityType === 'tracks' ? tracks : artists;
     const idField = entityType === 'tracks' ? 'track_id' : 'artist_id';
     return computeRankingTimeline(source as any, 5, idField); // Limit to top 5 for mobile clarity
   }, [tracks, artists, entityType]);
-
-  const tooltipTextProps = useAnimatedProps(() => {
-    return {
-      text: `Month: ${state.x.value.value}`,
-    } as any;
-  });
 
   if (data.length === 0) {
     return (
@@ -55,50 +54,83 @@ const RankingMovementChart: React.FC<Props> = ({ tracks, artists }) => {
         style={styles.toggle}
       />
 
-      <View style={{ height: 300 }}>
-        <CartesianChart
-          data={data}
-          xKey="month"
-          yKeys={topEntities as any}
-          padding={{ top: 20, bottom: 5, left: 20, right: 20 }}
-          domain={{ y: [10, 1] }}
-          axisOptions={{
-            tickCount: 5,
-            labelColor: theme.colors.onSurfaceVariant as string,
-            labelOffset: 4,
-            lineColor: theme.colors.outlineVariant as string,
-            labelPosition: "outset",
-            formatXLabel: (label) => label,
-            formatYLabel: (label: string | number) => Math.round(Number(label)).toString(),
-          }}
-          chartPressState={state}
-        >
-          {({ points, chartBounds }) => (
-            <>
-              {topEntities.map((entity, i) => (
-                <Line
-                  key={entity}
-                  points={(points as any)[entity]}
-                  color={CHART_COLORS[i % CHART_COLORS.length]}
-                  strokeWidth={3}
-                  curveType="monotoneX"
-                  animate={{ type: "timing", duration: 300 }}
+      <View style={styles.chartWrapper}>
+        <VictoryChart
+          width={width - 32}
+          height={300}
+          padding={{ top: 40, bottom: 40, left: 40, right: 40 }}
+          containerComponent={
+            <VictoryVoronoiContainer
+              labels={({ datum }: { datum: any }) => {
+                const y = typeof datum.y === 'number' ? datum.y : 'N/A';
+                const entityName = datum.childName || 'Unknown';
+                return `${entityName}: Rank ${y}`;
+              }}
+              labelComponent={
+                <VictoryTooltip
+                  flyoutStyle={{
+                    fill: theme.colors.surfaceVariant,
+                    stroke: theme.colors.outlineVariant,
+                  }}
+                  style={{ fill: theme.colors.onSurfaceVariant, fontSize: 10 }}
                 />
-              ))}
-            </>
-          )}
-        </CartesianChart>
-
-        {isActive && (
-          <View pointerEvents="none" style={[styles.tooltipContainer, { backgroundColor: theme.colors.surfaceVariant }]}>
-            <AnimatedTextInput
-              editable={false}
-              underlineColorAndroid="transparent"
-              style={[styles.tooltipText, { color: theme.colors.onSurface }]}
-              animatedProps={tooltipTextProps}
+              }
             />
-          </View>
-        )}
+          }
+        >
+          <VictoryAxis
+            fixLabelOverlap
+            style={{
+              axis: { stroke: theme.colors.outlineVariant },
+              tickLabels: { fill: theme.colors.onSurfaceVariant, fontSize: 8 },
+              grid: { stroke: 'transparent' }
+            }}
+          />
+          <VictoryAxis
+            dependentAxis
+            invertAxis
+            domain={[1, 5]}
+            tickValues={[1, 2, 3, 4, 5]}
+            style={{
+              axis: { stroke: theme.colors.outlineVariant },
+              tickLabels: { fill: theme.colors.onSurfaceVariant, fontSize: 8 },
+              grid: { stroke: theme.colors.outlineVariant, strokeDasharray: "4, 4" }
+            }}
+          />
+          {topEntities.map((entity, i) => {
+            const entityColor = CHART_COLORS[i % CHART_COLORS.length];
+            const scatterData = data.filter(d => d[entity] !== null);
+            
+            return (
+              <VictoryGroup key={entity}>
+                <VictoryLine
+                  name={entity}
+                  data={data}
+                  x="month"
+                  y={entity}
+                  style={{
+                    data: {
+                      stroke: entityColor,
+                      strokeWidth: 3
+                    }
+                  }}
+                  animate={{ duration: 500 }}
+                />
+                <VictoryScatter
+                  data={scatterData}
+                  x="month"
+                  y={entity}
+                  size={4}
+                  style={{
+                    data: {
+                      fill: entityColor
+                    }
+                  }}
+                />
+              </VictoryGroup>
+            );
+          })}
+        </VictoryChart>
       </View>
       
       <View style={styles.legendContainer}>
@@ -116,15 +148,20 @@ const RankingMovementChart: React.FC<Props> = ({ tracks, artists }) => {
 const styles = StyleSheet.create({
   container: {
     padding: 8,
+    alignItems: 'center'
   },
   toggle: {
     marginBottom: 16,
-    marginHorizontal: 16,
+    width: '100%',
   },
   centered: {
     height: 200,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  chartWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   legendContainer: {
       flexDirection: 'row',
@@ -146,31 +183,8 @@ const styles = StyleSheet.create({
   },
   legendText: {
       maxWidth: 100,
-  },
-  tooltipText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  tooltipContainer: {
-    position: 'absolute',
-    top: 5,
-    right: 5,
-    padding: 8,
-    borderRadius: 8,
-    ...Platform.select({
-      web: {
-        // @ts-ignore - Web specific
-        boxShadow: '0px 2px 4px rgba(0,0,0,0.1)',
-      },
-      default: {
-        elevation: 3,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      }
-    })
   }
 });
 
 export default RankingMovementChart;
+

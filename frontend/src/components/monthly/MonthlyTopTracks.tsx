@@ -30,7 +30,11 @@ const MonthlyTopTracks = () => {
     const fetchTracksAndArt = async () => {
       try {
         const response = await api.get<GroupedTracks[]>('/api/tracks');
-        setGroupedTracks(response.data);
+        const sortedData = response.data.sort((a, b) => {
+          if (a.year !== b.year) return b.year - a.year;
+          return b.month - a.month;
+        });
+        setGroupedTracks(sortedData);
         setError(null);
 
         // Fetch album art if Spotify API is available

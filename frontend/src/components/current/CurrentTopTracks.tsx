@@ -24,19 +24,23 @@ const TrackItem = ({ track, index }: { track: Track; index: number }) => {
       <Card style={styles.card} mode="elevated">
         <Card.Title
           title={track.name}
-          subtitle={track.artists.map(a => a.name).join(', ')}
+          subtitle={track.artists.length > 0 ? track.artists.map(a => a.name).join(', ') : undefined}
           left={(props) => (
             <View style={styles.avatarContainer}>
-                <Image 
-                    source={{ uri: track.album.images[0]?.url || 'https://via.placeholder.com/150' }} 
-                    style={styles.thumbnail}
-                />
-                <View style={styles.rankBadge}>
-                    <Text style={styles.rankText}>{index + 1}</Text>
-                </View>
+              <Image 
+                source={{ uri: track.album.images[0]?.url || 'https://via.placeholder.com/150' }} 
+                style={styles.thumbnail}
+              />
+              <View style={styles.rankBadge}>
+                <Text style={styles.rankText}>{index + 1}</Text>
+              </View>
             </View>
           )}
-          right={(props) => <Text style={styles.albumText} numberOfLines={1}>{track.album.name}</Text>}
+          right={(props) => (
+            <Text style={styles.albumText} numberOfLines={1}>
+              {track.album.name}
+            </Text>
+          )}
         />
       </Card>
     </TouchableOpacity>

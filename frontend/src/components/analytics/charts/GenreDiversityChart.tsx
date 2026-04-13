@@ -1,14 +1,20 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, Dimensions, Platform, TextInput } from 'react-native';
+import { View, StyleSheet, Dimensions } from 'react-native';
 import { useTheme, Text } from 'react-native-paper';
-import { CartesianChart, StackedArea, Line, useChartPressState } from 'victory-native';
-import Animated, { useAnimatedProps } from 'react-native-reanimated';
+import { 
+  VictoryChart, 
+  VictoryArea, 
+  VictoryLine, 
+  VictoryAxis, 
+  VictoryStack, 
+  VictoryVoronoiContainer, 
+  VictoryTooltip,
+} from 'victory-native';
 import { GroupedRecords, Artist } from '../../../types';
 import { computeGenreTimeline, computeGenreDiversity } from '../../../utils/analyticsUtils';
 import { CHART_COLORS } from '../../../utils/chartTheme';
 
 const { width } = Dimensions.get('window');
-const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
 interface Props {
   artists: GroupedRecords<Artist>[];
@@ -24,21 +30,10 @@ const GenreDiversityChart: React.FC<Props> = ({ artists }) => {
   const mergedData = useMemo(() =>
     data.map((point, i) => ({
       ...point,
-      diversity: diversityData[i]?.diversity ?? 0,
+      diversity: Number(diversityData[i]?.diversity) || 0,
     })) as (Record<string, any> & { month: string; diversity: number })[],
     [data, diversityData]
   );
-
-  const { state, isActive } = useChartPressState({ 
-      x: "", 
-      y: { ...Object.fromEntries(topGenres.map(g => [g, 0])), diversity: 0 } 
-  } as any);
-
-  const tooltipTextProps = useAnimatedProps(() => {
-    return {
-      text: `${state.x.value.value} Diversity: ${state.y.diversity.value.value.toFixed(1)}`,
-    } as any;
-  });
 
   if (mergedData.length === 0) {
     return (
@@ -50,47 +45,86 @@ const GenreDiversityChart: React.FC<Props> = ({ artists }) => {
 
   return (
     <View style={styles.container}>
-      <View style={{ height: 300 }}>
-        <CartesianChart<any, any, any>
-          data={mergedData}
-          xKey="month"
-          yKeys={[...topGenres, "diversity"]}
-          padding={{ top: 20, bottom: 5, left: 10, right: 10 }}
-          axisOptions={{
-            labelColor: theme.colors.onSurfaceVariant as string,
-            lineColor: theme.colors.outlineVariant as string,
-            formatXLabel: (label) => label,
-          }}
-          chartPressState={state}
-        >
-          {({ points, chartBounds }) => (
-            <>
-              <StackedArea
-                points={topGenres.map(g => (points as any)[g])}
-                y0={chartBounds.bottom}
-                colors={CHART_COLORS.slice(0, 5)}
-                animate={{ type: "timing", duration: 300 }}
-              />
-              <Line
-                points={(points as any).diversity}
-                color="#FF9800"
-                strokeWidth={3}
-                animate={{ type: "timing", duration: 300 }}
-              />
-            </>
-          )}
-        </CartesianChart>
-
-        {isActive && (
-          <View pointerEvents="none" style={[styles.tooltipContainer, { backgroundColor: theme.colors.surfaceVariant }]}>
-            <AnimatedTextInput
-              editable={false}
-              underlineColorAndroid="transparent"
-              style={[styles.tooltipText, { color: theme.colors.onSurface }]}
-              animatedProps={tooltipTextProps}
+      <View style={styles.chartWrapper}>
+        <VictoryChart
+          width={width - 32}
+          height={300}
+          padding={{ top: 20, bottom: 40, left: 40, right: 40 }}
+          containerComponent={
+            <VictoryVoronoiContainer
+              labels={({ datum }) => {
+                const y = typeof datum.y === 'number' ? datum.y : 0;
+                if (datum.childName === 'Diversity') {
+                  return `Diversity: ${y.toFixed(1)}`;
+                }
+                const genreName = datum.childName || 'Unknown';
+                return `${genreName}: ${y} tracks`;
+              }}
+              labelComponent={
+                <VictoryTooltip
+                  flyoutStyle={{
+                    fill: theme.colors.surfaceVariant,
+                    stroke: theme.colors.outlineVariant,
+                  }}
+                  style={{ fill: theme.colors.onSurfaceVariant, fontSize: 10 }}
+                />
+              }
             />
-          </View>
-        )}
+          }
+        >
+          <VictoryAxis
+            fixLabelOverlap
+            style={{
+              axis: { stroke: theme.colors.outlineVariant },
+              tickLabels: { fill: theme.colors.onSurfaceVariant, fontSize: 8 },
+              grid: { stroke: 'transparent' }
+            }}
+          />
+          <VictoryAxis
+            dependentAxis
+            domain={[0, Math.max(0, ...mergedData.map(d => genres.reduce((sum, g) => sum + (Number(d[g]) || 0), 0)), 1)]}
+            style={{
+              axis: { stroke: theme.colors.outlineVariant },
+              tickLabels: { fill: theme.colors.onSurfaceVariant, fontSize: 8 },
+              grid: { stroke: theme.colors.outlineVariant, strokeDasharray: "4, 4" }
+            }}
+          />
+          
+          <VictoryStack>
+            {topGenres.map((genre, i) => (
+              <VictoryArea
+                key={genre}
+                name={genre}
+                data={mergedData}
+                x="month"
+                y={genre}
+                style={{
+                  data: {
+                    fill: CHART_COLORS[i % CHART_COLORS.length],
+                    fillOpacity: 0.6,
+                    stroke: CHART_COLORS[i % CHART_COLORS.length],
+                    strokeWidth: 1
+                  }
+                }}
+                animate={{ duration: 500 }}
+              />
+            ))}
+          </VictoryStack>
+
+          <VictoryLine
+            name="Diversity"
+            data={mergedData}
+            x="month"
+            y="diversity"
+            style={{
+              data: {
+                stroke: "#FF9800",
+                strokeWidth: 3
+              }
+            }}
+            animate={{ duration: 500 }}
+          />
+        </VictoryChart>
       </View>
 
        <View style={styles.legendContainer}>
@@ -112,11 +146,16 @@ const GenreDiversityChart: React.FC<Props> = ({ artists }) => {
 const styles = StyleSheet.create({
   container: {
     padding: 8,
+    alignItems: 'center'
   },
   centered: {
     height: 200,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  chartWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   legendContainer: {
     flexDirection: 'row',
@@ -135,31 +174,8 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
     marginRight: 4,
-  },
-  tooltipText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  tooltipContainer: {
-    position: 'absolute',
-    top: 5,
-    right: 5,
-    padding: 8,
-    borderRadius: 8,
-    ...Platform.select({
-      web: {
-        // @ts-ignore - Web specific
-        boxShadow: '0px 2px 4px rgba(0,0,0,0.1)',
-      },
-      default: {
-        elevation: 3,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      }
-    })
   }
 });
 
 export default GenreDiversityChart;
+

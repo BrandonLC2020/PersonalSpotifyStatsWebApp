@@ -27,7 +27,11 @@ const MonthlyTopArtists = () => {
     const fetchArtists = async () => {
       try {
         const response = await api.get<GroupedArtists[]>('/api/artists');
-        setGroupedArtists(response.data);
+        const sortedData = response.data.sort((a, b) => {
+          if (a.year !== b.year) return b.year - a.year;
+          return b.month - a.month;
+        });
+        setGroupedArtists(sortedData);
         setError(null);
       } catch (err) {
         setError('Failed to fetch artists. Make sure the backend server is running.');

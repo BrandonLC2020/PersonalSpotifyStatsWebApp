@@ -1,26 +1,44 @@
-import React, { useState, useEffect } from 'react';
-import { PaperProvider, ActivityIndicator } from 'react-native-paper';
+import React from 'react';
+import { PaperProvider } from 'react-native-paper';
 import { AuthProvider } from './src/context/AuthContext';
 import MainNavigator from './src/navigation/MainNavigator';
 import { darkTheme, lightTheme } from './src/theme';
-import { useColorScheme, Platform, View } from 'react-native';
+import { useColorScheme, LogBox, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
-// Skia initialization for web
-let AppContent = MainNavigator;
-
+// Victory Native v36 and React Native Paper pass native-only props to SVG/DOM elements on Web,
+// which triggers intensive warnings in React 19. Since these are internal to libraries,
+// we suppress them to keep the developer console usable.
 if (Platform.OS === 'web') {
-  const { WithSkiaWeb } = require("@shopify/react-native-skia/lib/module/web");
-  AppContent = () => (
-    <WithSkiaWeb
-      getComponent={() => import("./src/navigation/MainNavigator")}
-      opts={{
-        locateFile: (file) => `https://cdn.jsdelivr.net/npm/canvaskit-wasm@0.39.1/bin/full/${file}`,
-      }}
-      fallback={<View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" /></View>}
-    />
-  );
+  const IGNORED_WARNINGS = [
+    'accessibilityHint',
+    'accessibilityRole',
+    'props.pointerEvents',
+    'shadow* style props',
+    'React does not recognize the',
+  ];
+
+  const originalError = console.error;
+  console.error = (...args) => {
+    if (typeof args[0] === 'string' && IGNORED_WARNINGS.some(w => args[0].includes(w))) {
+      return;
+    }
+    originalError(...args);
+  };
+
+  const originalWarn = console.warn;
+  console.warn = (...args) => {
+    if (typeof args[0] === 'string' && IGNORED_WARNINGS.some(w => args[0].includes(w))) {
+      return;
+    }
+    originalWarn(...args);
+  };
 }
+
+LogBox.ignoreLogs([
+  'React does not recognize the `accessibilityHint` prop',
+  'props.pointerEvents is deprecated',
+]);
 
 export default function App() {
   const colorScheme = useColorScheme();
@@ -30,7 +48,7 @@ export default function App() {
     <AuthProvider>
       <PaperProvider theme={theme}>
         <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-        <AppContent />
+        <MainNavigator />
       </PaperProvider>
     </AuthProvider>
   );

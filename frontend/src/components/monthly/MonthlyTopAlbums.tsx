@@ -27,7 +27,11 @@ const MonthlyTopAlbums = () => {
     const fetchAlbums = async () => {
       try {
         const response = await api.get<GroupedAlbums[]>('/api/albums');
-        setGroupedAlbums(response.data);
+        const sortedData = response.data.sort((a, b) => {
+          if (a.year !== b.year) return b.year - a.year;
+          return b.month - a.month;
+        });
+        setGroupedAlbums(sortedData);
         setError(null);
       } catch (err) {
         setError('Failed to fetch albums. Make sure the backend server is running.');

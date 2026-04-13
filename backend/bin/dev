@@ -26,24 +26,30 @@ end
 
 # --- Main Script ---
 
-# 1. Clean up and stop any old tunnels on exit
-at_exit do
+# 1. Clean up and stop any old tunnels
+def cleanup_tunnels
+  puts "=> Cleaning up existing SSH tunnels on port #{LOCAL_PORT}..."
+  
+  # Kill by PID file if it exists
   if File.exist?(PID_FILE)
     pid = File.read(PID_FILE).to_i
-    puts "\n=> Exiting. Stopping SSH tunnel (PID: #{pid})..."
     begin
       Process.kill('TERM', pid)
+      Process.wait(pid) rescue nil
     rescue Errno::ESRCH
-      # Process already gone
     end
     File.delete(PID_FILE)
   end
+
+  # Aggressive cleanup: kill any process listening on the local port
+  `lsof -ti :#{LOCAL_PORT} | xargs kill -9 2>/dev/null`
 end
 
-# 2. Construct the autossh command from .env variables
+cleanup_tunnels
+
+# 2. Construct the SSH command from .env variables
 bastion_host = ENV['BASTION_HOST']
 bastion_user = ENV['BASTION_USER']
-# IMPORTANT: Expand path to handle '~' correctly
 bastion_key = File.expand_path(ENV['BASTION_KEYFILE_PATH'])
 db_host = ENV['DB_HOST']
 
@@ -52,21 +58,34 @@ if [bastion_host, bastion_user, bastion_key, db_host].any?(&:nil?)
   exit 1
 end
 
-command = [
-  "autossh -M 0 -f -N",
+# Check for autossh, fallback to ssh
+has_autossh = system("command -v autossh > /dev/null 2>&1")
+ssh_cmd = has_autossh ? "autossh -M 0" : "ssh"
+puts "=> Using #{ssh_cmd == 'ssh' ? 'standard ssh' : 'autossh'} for the tunnel..."
+
+common_args = [
   "-o \"ServerAliveInterval=60\"",
   "-o \"ServerAliveCountMax=3\"",
   "-o \"ExitOnForwardFailure=yes\"",
+  "-o \"BatchMode=yes\"",
+  "-o \"StrictHostKeyChecking=no\"",
   "-L #{LOCAL_PORT}:#{db_host}:#{DB_PORT}",
   "-i #{bastion_key}",
   "#{bastion_user}@#{bastion_host}"
-].join(' ')
+]
+
+command = "#{ssh_cmd} -N #{common_args.join(' ')}"
 
 # 3. Start the SSH tunnel
 puts "=> Starting SSH tunnel..."
-pid = spawn(command)
-Process.detach(pid)
-File.write(PID_FILE, pid)
+
+def start_tunnel(command)
+  pid = spawn(command)
+  File.write(PID_FILE, pid)
+  pid
+end
+
+tunnel_pid = start_tunnel(command)
 
 # 4. Wait for the tunnel to be ready
 puts "=> Waiting for tunnel on port #{LOCAL_PORT}..."
@@ -76,14 +95,52 @@ until port_open?('127.0.0.1', LOCAL_PORT)
   if retries >= max_retries
     puts "=> ERROR: Tunnel failed to start after #{max_retries} seconds."
     puts "=> Please run the following command manually to debug:"
-    puts "\n   #{command.gsub('-f -N', '-v -N')}\n"
+    puts "\n   #{command.gsub('-N', '-v -N')}\n"
     exit 1
   end
   sleep(1)
   retries += 1
 end
-puts "=> SSH Tunnel is active (PID: #{pid})."
+puts "=> SSH Tunnel is active (PID: #{tunnel_pid})."
 
-# 5. Start the Rails server
+# 5. Start the Rails server and monitor
 puts "=> Starting Rails server..."
-exec('bundle exec rails s -p 3001')
+rails_pid = spawn('bundle exec rails s -p 3001')
+
+# 6. Monitoring loop
+begin
+  loop do
+    # Check if Rails is still running
+    if Process.wait(rails_pid, Process::WNOHANG)
+      status = $?
+      puts "=> Rails server exited with status #{status.exitstatus}. Shutting down..."
+      break
+    end
+
+    # Check if Tunnel is still running
+    if Process.wait(tunnel_pid, Process::WNOHANG)
+      puts "=> WARNING: SSH Tunnel process (PID: #{tunnel_pid}) died!"
+      if port_open?('127.0.0.1', LOCAL_PORT)
+        puts "=> Connection seems to be persisting (maybe a backgrounded ssh). Monitoring..."
+      else
+        puts "=> Tunnel is down. Attempting to restart..."
+        tunnel_pid = start_tunnel(command)
+        sleep 2
+      end
+    end
+
+    sleep 5
+  end
+rescue Interrupt
+  puts "\n=> Stopping backend services..."
+ensure
+  cleanup_tunnels
+  if rails_pid
+    begin
+      puts "=> Killing Rails server (PID: #{rails_pid})..."
+      Process.kill('TERM', rails_pid)
+      Process.wait(rails_pid) rescue nil
+    rescue Errno::ESRCH, Errno::ECHILD
+    end
+  end
+end

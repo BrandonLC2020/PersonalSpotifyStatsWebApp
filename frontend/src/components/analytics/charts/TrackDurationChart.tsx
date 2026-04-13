@@ -1,13 +1,18 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, Dimensions, Platform, TextInput } from 'react-native';
-import { useTheme, Text, ActivityIndicator } from 'react-native-paper';
-import { CartesianChart, Area, Line, useChartPressState } from 'victory-native';
-import Animated, { useAnimatedProps, useDerivedValue } from 'react-native-reanimated';
+import { View, StyleSheet, Dimensions } from 'react-native';
+import { useTheme, Text } from 'react-native-paper';
+import { 
+  VictoryChart, 
+  VictoryArea, 
+  VictoryLine, 
+  VictoryAxis, 
+  VictoryVoronoiContainer, 
+  VictoryTooltip 
+} from 'victory-native';
 import { GroupedRecords, Track } from '../../../types';
 import { computeAvgDuration } from '../../../utils/analyticsUtils';
 
 const { width } = Dimensions.get('window');
-const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
 interface Props {
   tracks: GroupedRecords<Track>[];
@@ -16,12 +21,19 @@ interface Props {
 const TrackDurationChart: React.FC<Props> = ({ tracks }) => {
   const theme = useTheme();
 
-  const data = useMemo(() => computeAvgDuration(tracks) as (Record<string, any> & { month: string; avgDurationMs: number })[], [tracks]);
+  const data = useMemo(() => {
+    const rawData = computeAvgDuration(tracks);
+    return rawData.map(d => ({
+        ...d,
+        avgDurationMs: Number(d.avgDurationMs) || 0,
+    })) as (Record<string, any> & { month: string; avgDurationMs: number })[];
+  }, [tracks]);
 
   const overallAvg = useMemo(() => {
-    const validPoints = data.filter(d => d.avgDurationMs > 0);
+    const validPoints = data.filter(d => (Number(d.avgDurationMs) || 0) > 0);
     if (validPoints.length === 0) return 0;
-    return validPoints.reduce((sum, d) => sum + d.avgDurationMs, 0) / validPoints.length;
+    const total = validPoints.reduce((sum, d) => sum + (Number(d.avgDurationMs) || 0), 0);
+    return total / validPoints.length || 0;
   }, [data]);
 
   const formatDuration = (ms: number) => {
@@ -30,22 +42,6 @@ const TrackDurationChart: React.FC<Props> = ({ tracks }) => {
     const seconds = totalSeconds % 60;
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
-
-  const { state, isActive } = useChartPressState({ 
-      x: "", 
-      y: { avgDurationMs: 0 } 
-  });
-
-  const tooltipTextProps = useAnimatedProps(() => {
-    const ms = state.y.avgDurationMs.value.value;
-    const totalSeconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    const formatted = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    return {
-      text: `${state.x.value.value}: ${formatted}`,
-    } as any;
-  });
 
   if (data.length === 0) {
     return (
@@ -64,57 +60,79 @@ const TrackDurationChart: React.FC<Props> = ({ tracks }) => {
         </Text>
       </View>
 
-      <View style={{ height: 300 }}>
-        <CartesianChart
-          data={data}
-          xKey="month"
-          yKeys={["avgDurationMs"]}
-          padding={{ top: 20, bottom: 5, left: 10, right: 10 }}
-          axisOptions={{
-            labelColor: theme.colors.onSurfaceVariant as string,
-            lineColor: theme.colors.outlineVariant as string,
-            formatXLabel: (label) => label,
-            formatYLabel: (value: string | number) => formatDuration(Number(value)),
-          }}
-          chartPressState={state}
-        >
-          {({ points, chartBounds }) => (
-            <>
-              <Area
-                points={points.avgDurationMs}
-                y0={chartBounds.bottom}
-                color="#1DB954"
-                opacity={0.3}
-                animate={{ type: "timing", duration: 300 }}
-              />
-              <Line
-                points={points.avgDurationMs}
-                color="#1DB954"
-                strokeWidth={2}
-                animate={{ type: "timing", duration: 300 }}
-              />
-              {overallAvg > 0 && (
-                  <Line
-                    points={data.map(d => ({ x: d.month, y: overallAvg })) as any}
-                    color="#FF9800"
-                    strokeWidth={1}
-                    opacity={0.5}
-                  />
-              )}
-            </>
-          )}
-        </CartesianChart>
-
-        {isActive && (
-          <View pointerEvents="none" style={[styles.tooltipContainer, { backgroundColor: theme.colors.surfaceVariant }]}>
-            <AnimatedTextInput
-              editable={false}
-              underlineColorAndroid="transparent"
-              style={[styles.tooltipText, { color: theme.colors.onSurface }]}
-              animatedProps={tooltipTextProps}
+      <View style={styles.chartWrapper}>
+        <VictoryChart
+          width={width - 32}
+          height={300}
+          padding={{ top: 20, bottom: 40, left: 50, right: 40 }}
+          containerComponent={
+            <VictoryVoronoiContainer
+              labels={({ datum }: { datum: any }) => {
+                const y = typeof datum.avgDurationMs === 'number' ? datum.avgDurationMs : 0;
+                return `${datum.month}: ${formatDuration(y)}`;
+              }}
+              labelComponent={
+                <VictoryTooltip
+                  flyoutStyle={{
+                    fill: theme.colors.surfaceVariant,
+                    stroke: theme.colors.outlineVariant,
+                  }}
+                  style={{ fill: theme.colors.onSurfaceVariant, fontSize: 10 }}
+                />
+              }
             />
-          </View>
-        )}
+          }
+        >
+          <VictoryAxis
+            fixLabelOverlap
+            style={{
+              axis: { stroke: theme.colors.outlineVariant },
+              tickLabels: { fill: theme.colors.onSurfaceVariant, fontSize: 8 },
+              grid: { stroke: 'transparent' }
+            }}
+          />
+          <VictoryAxis
+            dependentAxis
+            tickFormat={(t: any) => formatDuration(t)}
+            domain={[0, Math.max(0, ...data.map(d => Number(d.avgDurationMs) || 0), Number(overallAvg) || 0, 1)]}
+            style={{
+              axis: { stroke: theme.colors.outlineVariant },
+              tickLabels: { fill: theme.colors.onSurfaceVariant, fontSize: 8 },
+              grid: { stroke: theme.colors.outlineVariant, strokeDasharray: "4, 4" }
+            }}
+          />
+          
+          <VictoryArea
+            data={data}
+            x="month"
+            y="avgDurationMs"
+            style={{
+              data: {
+                fill: "#1DB954",
+                fillOpacity: 0.3,
+                stroke: "#1DB954",
+                strokeWidth: 2
+              }
+            }}
+            animate={{ duration: 500 }}
+          />
+
+          {overallAvg > 0 && (
+            <VictoryLine
+              data={data.map(d => ({ month: d.month, y: overallAvg }))}
+              x="month"
+              y="y"
+              style={{
+                data: {
+                  stroke: "#FF9800",
+                  strokeWidth: 1,
+                  strokeDasharray: "5, 5",
+                  opacity: 0.7
+                }
+              }}
+            />
+          )}
+        </VictoryChart>
       </View>
     </View>
   );
@@ -123,6 +141,7 @@ const TrackDurationChart: React.FC<Props> = ({ tracks }) => {
 const styles = StyleSheet.create({
   container: {
     padding: 8,
+    alignItems: 'center'
   },
   centered: {
     height: 200,
@@ -140,30 +159,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1DB954',
   },
-  tooltipText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  tooltipContainer: {
-    position: 'absolute',
-    top: 5,
-    right: 5,
-    padding: 8,
-    borderRadius: 8,
-    ...Platform.select({
-      web: {
-        // @ts-ignore - Web specific
-        boxShadow: '0px 2px 4px rgba(0,0,0,0.1)',
-      },
-      default: {
-        elevation: 3,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      }
-    })
+  chartWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
   }
 });
 
 export default TrackDurationChart;
+

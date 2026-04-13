@@ -53,28 +53,52 @@ export function computeRankingTimeline(
   idField: string = 'track_id',
   nameField: string = 'name'
 ): { data: RankingDataPoint[]; entities: string[] } {
-  // Collect all entity names that appear in the top N across all months
-  const entityNames = new Set<string>();
+  // Collect all entity names and their appearance frequency
+  const entityCounts = new Map<string, number>();
   const months = getAllMonths(groupedData);
 
+  // First pass: identify all entities and count appearances in top N
+  months.forEach(monthLabel => {
+    const group = groupedData.find(
+      g => g.year === monthLabel.year && g.month === monthLabel.month
+    );
+    if (group) {
+      group.records.slice(0, topN).forEach((record: any) => {
+        const name = record[nameField];
+        entityCounts.set(name, (entityCounts.get(name) || 0) + 1);
+      });
+    }
+  });
+
+  // Sort entities by frequency (descending) to prioritize "heavy hitters"
+  const entities = Array.from(entityCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([name]) => name);
+
+  // Second pass: build data points with consistent keys
   const data: RankingDataPoint[] = months.map(monthLabel => {
     const group = groupedData.find(
       g => g.year === monthLabel.year && g.month === monthLabel.month
     );
     const point: RankingDataPoint = { month: monthLabel.label };
 
+    // Initialize all entities to null (better for VictoryLine to show breaks)
+    entities.forEach(name => {
+      point[name] = null;
+    });
+
     if (group) {
       group.records.slice(0, topN).forEach((record: any) => {
         const name = record[nameField];
-        entityNames.add(name);
-        point[name] = record.standing ?? (group.records.indexOf(record) + 1);
+        const standing = record.standing ?? (group.records.indexOf(record) + 1);
+        point[name] = typeof standing === 'number' && !isNaN(standing) ? standing : null;
       });
     }
 
     return point;
   });
 
-  return { data, entities: Array.from(entityNames) };
+  return { data, entities };
 }
 
 /**
@@ -174,7 +198,7 @@ export function computeGenreDiversity(
 
     return {
       month: monthLabel.label,
-      diversity: shannonEntropy(genreCounts, totalGenres),
+      diversity: Number(shannonEntropy(genreCounts, totalGenres)) || 0,
     };
   });
 }
@@ -230,8 +254,8 @@ export function computeLoyaltyStats(
       longestStreak: computeLongestStreak(data.months, uniqueMonthKeys),
       avgStanding:
         Math.round(
-          (data.standings.reduce((a, b) => a + b, 0) / data.standings.length) * 10
-        ) / 10,
+          ((data.standings.reduce((a, b) => a + b, 0) || 0) / (data.standings.length || 1)) * 10
+        ) / 10 || 0,
       image: data.image,
     }))
     .sort((a, b) => b.monthsAppeared - a.monthsAppeared);
@@ -270,7 +294,12 @@ export function computeEntityChurn<T extends { [key: string]: any }>(
       const exited = Array.from(previousIds).filter(id => !currentIds.has(id)).length;
       const retained = Array.from(currentIds).filter(id => previousIds.has(id)).length;
 
-      result.push({ month: monthLabel, entered, exited, retained });
+      result.push({ 
+        month: monthLabel, 
+        entered: Number(entered) || 0, 
+        exited: Number(exited) || 0, 
+        retained: Number(retained) || 0 
+      });
     }
 
     previousIds = currentIds;
@@ -309,9 +338,9 @@ export function computeAvgDuration(
 
     return {
       month: monthLabel.label,
-      avgDurationMs: Math.round(avgMs),
+      avgDurationMs: Math.round(avgMs) || 0,
       avgDurationFormatted: `${minutes}:${seconds.toString().padStart(2, '0')}`,
-      trackCount: validTracks.length,
+      trackCount: Number(validTracks.length) || 0,
     };
   });
 }
@@ -339,9 +368,9 @@ export function computeExplicitRatio(
 
     return {
       month: monthLabel.label,
-      explicit: explicitCount,
-      clean: cleanCount,
-      explicitPercent,
+      explicit: Number(explicitCount) || 0,
+      clean: Number(cleanCount) || 0,
+      explicitPercent: Number(explicitPercent) || 0,
     };
   });
 }

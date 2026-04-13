@@ -60,12 +60,12 @@ export interface AudioFeatures {
 
 export interface RankingDataPoint {
   month: string;
-  [entityName: string]: number | string;
+  [entityName: string]: number | string | null;
 }
 
 export interface GenreDataPoint {
   month: string;
-  [genre: string]: number | string;
+  [genre: string]: number | string | null;
 }
 
 export interface LoyaltyEntry {
