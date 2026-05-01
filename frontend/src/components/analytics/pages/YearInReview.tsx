@@ -1,17 +1,18 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Dimensions, Image, TouchableOpacity } from 'react-native';
-import { Text, Card, Title, Paragraph, ActivityIndicator, List, useTheme, Button, IconButton, Avatar } from 'react-native-paper';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { Box, CardContent, CardHeader } from '@mui/material';
+import { Typography, Card, CircularProgress, List, useTheme, Button, IconButton, Avatar, Icon } from '@mui/material';
+import { useNavigate, useParams } from 'react-router-dom';
+
 import useAnalyticsData from '../../../hooks/useAnalyticsData';
 import { CHART_COLORS } from '../../../utils/chartTheme';
 
-const { width } = Dimensions.get('window');
+const width = window.innerWidth;
 
 const YearInReview: React.FC = () => {
     const theme = useTheme();
-    const route = useRoute<any>();
-    const navigation = useNavigation<any>();
-    const year = route.params?.year || new Date().getFullYear();
+    const navigate = useNavigate();
+    const params = useParams();
+    const year = params.year ? parseInt(params.year, 10) : new Date().getFullYear();
 
     const { tracks, artists, albums, allMonths, loading, error } = useAnalyticsData();
     const [topArtistImage, setTopArtistImage] = useState<string>('');
@@ -79,98 +80,100 @@ const YearInReview: React.FC = () => {
         }
     }, [summary]);
 
-    if (loading) return <ActivityIndicator style={styles.centered} />;
-    if (error) return <View style={styles.centered}><Text style={{ color: theme.colors.error }}>{error}</Text></View>;
+    if (loading) return <CircularProgress style={styles.centered} />;
+    if (error) return <Box sx={styles.centered}><Typography style={{ color: theme.palette.error.main }}>{error}</Typography></Box>;
 
     if (yearTracks.length === 0) {
         return (
-            <View style={styles.centered}>
-                <Text variant="headlineSmall">No data for {year}</Text>
-                <Button mode="contained" onPress={() => navigation.goBack()} style={{ marginTop: 16 }}>Go Back</Button>
-            </View>
+            <Box sx={styles.centered}>
+                <Typography variant="h5">No data for {year}</Typography>
+                <Button variant="contained" onClick={() => navigate(-1)} style={{ marginTop: 16 }}>Go Back</Button>
+            </Box>
         );
     }
 
     return (
-        <ScrollView style={styles.container}>
-            <View style={styles.nav}>
+        <Box sx={{ overflowY: "auto", ...styles.container }}>
+            <Box sx={styles.nav}>
                 <IconButton 
-                    icon="arrow-left" 
                     disabled={!availableYears.includes(year - 1)} 
-                    onPress={() => navigation.setParams({ year: year - 1 })}
-                />
-                <Text variant="headlineMedium" style={styles.yearTitle}>{year}</Text>
+                    onClick={() => navigate(`/analytics/year/${year - 1}`)}
+                >
+                    <Icon>arrow_back</Icon>
+                </IconButton>
+                <Typography variant="h5" style={styles.yearTitle}>{year}</Typography>
                 <IconButton 
-                    icon="arrow-right" 
                     disabled={!availableYears.includes(year + 1)} 
-                    onPress={() => navigation.setParams({ year: year + 1 })}
-                />
-            </View>
+                    onClick={() => navigate(`/analytics/year/${year + 1}`)}
+                >
+                    <Icon>arrow_forward</Icon>
+                </IconButton>
+            </Box>
 
             <Card style={styles.heroCard}>
-                <Card.Content style={styles.centered}>
-                    <Text variant="headlineLarge" style={styles.heroText}>{year}</Text>
-                    <Text variant="titleMedium">Your Year in Music</Text>
-                </Card.Content>
+                <CardContent sx={styles.centered}>
+                    <Typography variant="h4" style={styles.heroText}>{year}</Typography>
+                    <Typography variant="h6">Your Year in Music</Typography>
+                </CardContent>
             </Card>
 
             {summary.topArtist && (
                 <Card style={styles.sectionCard}>
-                    <Card.Content style={styles.centered}>
-                        <Text variant="labelLarge" style={styles.sectionLabel}>YOUR TOP ARTIST</Text>
+                    <CardContent sx={styles.centered}>
+                        <Typography variant="subtitle1" style={styles.sectionLabel}>YOUR TOP ARTIST</Typography>
                         {topArtistImage ? (
-                            <Image source={{ uri: topArtistImage }} style={styles.topArtistImage} />
+                            <Box component="img" src={topArtistImage} sx={styles.topArtistImage} />
                         ) : (
-                            <Avatar.Icon size={120} icon="account" style={styles.artistPlaceholder} />
+                            <Avatar sx={{ width: 120, height: 120, ...styles.artistPlaceholder }}><Icon>account_circle</Icon></Avatar>
                         )}
-                        <Text variant="headlineMedium" style={styles.artistName}>{summary.topArtist[1].name}</Text>
-                        <Text variant="bodyMedium">In your top list for {summary.topArtist[1].count} months</Text>
-                    </Card.Content>
+                        <Typography variant="h5" sx={styles.artistName}>{summary.topArtist[1].name}</Typography>
+                        <Typography variant="body1">In your top list for {summary.topArtist[1].count} months</Typography>
+                    </CardContent>
                 </Card>
             )}
 
             {summary.topTrack && (
                 <Card style={styles.sectionCard}>
-                   <Card.Content style={styles.centered}>
-                        <Text variant="labelLarge" style={styles.sectionLabel}>YOUR TOP TRACK</Text>
-                        <View style={styles.trackHero}>
-                            <Text variant="headlineSmall" style={styles.trackName}>🎵 {summary.topTrack[1].name}</Text>
-                            <Text variant="bodyMedium">Featured in {summary.topTrack[1].count} months this year</Text>
-                        </View>
-                    </Card.Content>
+                   <CardContent sx={styles.centered}>
+                        <Typography variant="subtitle1" style={styles.sectionLabel}>YOUR TOP TRACK</Typography>
+                        <Box sx={styles.trackHero}>
+                            <Typography variant="h5" sx={styles.trackName}>🎵 {summary.topTrack[1].name}</Typography>
+                            <Typography variant="body1">Featured in {summary.topTrack[1].count} months this year</Typography>
+                        </Box>
+                    </CardContent>
                 </Card>
             )}
 
             <Card style={styles.sectionCard}>
-                <Card.Title title="By the Numbers" />
-                <Card.Content style={styles.statsGrid}>
-                    <View style={styles.statBox}>
-                        <Text variant="headlineMedium" style={styles.statValue}>{summary.uniqueTracks}</Text>
-                        <Text variant="labelSmall">Tracks</Text>
-                    </View>
-                    <View style={styles.statBox}>
-                        <Text variant="headlineMedium" style={styles.statValue}>{summary.uniqueArtists}</Text>
-                        <Text variant="labelSmall">Artists</Text>
-                    </View>
-                    <View style={styles.statBox}>
-                        <Text variant="headlineMedium" style={styles.statValue}>{summary.uniqueAlbums}</Text>
-                        <Text variant="labelSmall">Albums</Text>
-                    </View>
-                    <View style={styles.statBox}>
-                        <Text variant="headlineMedium" style={styles.statValue}>{summary.topGenres.length}</Text>
-                        <Text variant="labelSmall">Genres</Text>
-                    </View>
-                </Card.Content>
+                <CardHeader title="By the Numbers" />
+                <CardContent sx={styles.statsGrid}>
+                    <Box sx={styles.statBox}>
+                        <Typography variant="h5" style={styles.statValue}>{summary.uniqueTracks}</Typography>
+                        <Typography variant="caption">Tracks</Typography>
+                    </Box>
+                    <Box sx={styles.statBox}>
+                        <Typography variant="h5" style={styles.statValue}>{summary.uniqueArtists}</Typography>
+                        <Typography variant="caption">Artists</Typography>
+                    </Box>
+                    <Box sx={styles.statBox}>
+                        <Typography variant="h5" style={styles.statValue}>{summary.uniqueAlbums}</Typography>
+                        <Typography variant="caption">Albums</Typography>
+                    </Box>
+                    <Box sx={styles.statBox}>
+                        <Typography variant="h5" style={styles.statValue}>{summary.topGenres.length}</Typography>
+                        <Typography variant="caption">Genres</Typography>
+                    </Box>
+                </CardContent>
             </Card>
 
-            <View style={styles.footer}>
-                <Text variant="titleMedium" style={styles.footerText}>That was your {year} 🎉</Text>
-            </View>
-        </ScrollView>
+            <Box sx={styles.footer}>
+                <Typography variant="h6" style={styles.footerText}>That was your {year} 🎉</Typography>
+            </Box>
+        </Box>
     );
 };
 
-const styles = StyleSheet.create({
+const styles = {
   container: {
     flex: 1,
     padding: 16,
@@ -223,7 +226,7 @@ const styles = StyleSheet.create({
   },
   artistName: {
     fontWeight: 'bold',
-    textAlign: 'center',
+    textAlign: "center",
   },
   trackHero: {
     alignItems: 'center',
@@ -231,7 +234,7 @@ const styles = StyleSheet.create({
   },
   trackName: {
     fontWeight: 'bold',
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 8,
   },
   statsGrid: {
@@ -257,6 +260,6 @@ const styles = StyleSheet.create({
   footerText: {
     opacity: 0.6,
   }
-});
+};
 
 export default YearInReview;

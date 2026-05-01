@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Image } from 'react-native';
-import { Text, ActivityIndicator, List, useTheme } from 'react-native-paper';
+import { Box, Typography, CircularProgress, List, ListItem, ListItemAvatar, ListItemText, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import api from '../../utils/api';
 
 interface Album {
@@ -21,7 +21,6 @@ const MonthlyTopAlbums = () => {
   const [groupedAlbums, setGroupedAlbums] = useState<GroupedAlbums[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const theme = useTheme();
 
   useEffect(() => {
     const fetchAlbums = async () => {
@@ -51,71 +50,80 @@ const MonthlyTopAlbums = () => {
   };
 
   if (loading) {
-    return <ActivityIndicator style={styles.centered} size="large" />;
+    return <Box sx={styles.centered}><CircularProgress size={60} /></Box>;
   }
 
   if (error) {
     return (
-      <View style={styles.centered}>
-        <Text style={{ color: theme.colors.error }}>{error}</Text>
-      </View>
+      <Box sx={styles.centered}>
+        <Typography color="error">{error}</Typography>
+      </Box>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <Text variant="headlineSmall" style={styles.title}>Monthly Top Albums</Text>
+    <Box sx={styles.container}>
+      <Typography variant="h5" sx={styles.title}>Monthly Top Albums</Typography>
       {groupedAlbums.map((group, groupIndex) => (
-        <List.Accordion
-          key={`${group.year}-${group.month}`}
-          title={`${getMonthName(group.month)} ${group.year}`}
-          left={props => <List.Icon {...props} icon="album" />}
-        >
-          {group.records.map((album, index) => (
-            <List.Item
-              key={album.album_id}
-              title={album.name}
-              description={`${album.album_type} • ${album.release_date}`}
-              left={props => (
-                <Image
-                  source={{ uri: album.images?.[0]?.url || 'https://via.placeholder.com/150' }}
-                  style={styles.thumbnail}
-                />
-              )}
-              right={props => <Text style={styles.rankText}>#{index + 1}</Text>}
-            />
-          ))}
-        </List.Accordion>
+        <Accordion key={`${group.year}-${group.month}`}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="h6">{`${getMonthName(group.month)} ${group.year}`}</Typography>
+          </AccordionSummary>
+          <AccordionDetails sx={{ p: 0 }}>
+            <List>
+              {group.records.map((album, index) => (
+                <ListItem key={album.album_id} divider>
+                  <Typography sx={styles.rankText}>#{index + 1}</Typography>
+                  <ListItemAvatar sx={{ ml: 1, mr: 2 }}>
+                    <Box component="img"
+                      src={album.images?.[0]?.url || 'https://via.placeholder.com/150'}
+                      sx={styles.thumbnail}
+                    />
+                  </ListItemAvatar>
+                  <ListItemText 
+                    primary={album.name} 
+                    secondary={`${album.album_type} • ${album.release_date}`} 
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </AccordionDetails>
+        </Accordion>
       ))}
-    </ScrollView>
+    </Box>
   );
 };
 
-const styles = StyleSheet.create({
+const styles = {
   container: {
     flex: 1,
+    overflowY: "auto",
+    pb: 10,
   },
   title: {
-    padding: 16,
+    p: 2,
     fontWeight: 'bold',
   },
   centered: {
-    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    minHeight: '50vh',
+    p: 3,
   },
   thumbnail: {
     width: 48,
     height: 48,
     borderRadius: 4,
-    marginLeft: 8,
+    objectFit: 'cover' as const,
   },
   rankText: {
-    alignSelf: 'center',
-    marginRight: 16,
+    fontWeight: 'bold',
     opacity: 0.6,
+    width: 30,
+    textAlign: "center",
   },
-});
+};
 
 export default MonthlyTopAlbums;

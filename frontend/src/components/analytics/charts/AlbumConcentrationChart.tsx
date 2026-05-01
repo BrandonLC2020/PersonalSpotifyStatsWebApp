@@ -1,17 +1,17 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
-import { useTheme, Text, ActivityIndicator } from 'react-native-paper';
+import { Box } from '@mui/material';
+import { useTheme, Typography, CircularProgress } from '@mui/material';
 import { 
   VictoryChart, 
   VictoryBar, 
   VictoryAxis, 
   VictoryVoronoiContainer, 
   VictoryTooltip 
-} from 'victory-native';
+} from 'victory';
 import { useAlbumConcentration } from '../../../hooks/useAnalyticsApi';
 import { CHART_COLORS } from '../../../utils/chartTheme';
 
-const { width } = Dimensions.get('window');
+const width = window.innerWidth;
 
 const AlbumConcentrationChart: React.FC = () => {
   const theme = useTheme();
@@ -35,13 +35,13 @@ const AlbumConcentrationChart: React.FC = () => {
       .map(d => ({ ...d, x: d.name }));
   }, [data]);
 
-  if (loading) return <View style={styles.centered}><ActivityIndicator /></View>;
-  if (error) return <View style={styles.centered}><Text style={{ color: theme.colors.error }}>{error}</Text></View>;
+  if (loading) return <Box sx={styles.centered}><CircularProgress /></Box>;
+  if (error) return <Box sx={styles.centered}><Typography style={{ color: theme.palette.error.main }}>{error}</Typography></Box>;
   if (!data || data.length === 0) return null;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.chartWrapper}>
+    <Box sx={styles.container}>
+      <Box sx={styles.chartWrapper}>
         <VictoryChart
           width={width - 32}
           height={350}
@@ -56,10 +56,10 @@ const AlbumConcentrationChart: React.FC = () => {
               labelComponent={
                 <VictoryTooltip
                   flyoutStyle={{
-                    fill: theme.colors.surfaceVariant,
-                    stroke: theme.colors.outlineVariant,
+                    fill: theme.palette.action.hover,
+                    stroke: theme.palette.divider,
                   }}
-                  style={{ fill: theme.colors.onSurfaceVariant, fontSize: 10 }}
+                  style={{ fill: theme.palette.text.secondary, fontSize: 10 }}
                 />
               }
             />
@@ -68,9 +68,9 @@ const AlbumConcentrationChart: React.FC = () => {
           <VictoryAxis
             fixLabelOverlap
             style={{
-              axis: { stroke: theme.colors.outlineVariant },
+              axis: { stroke: theme.palette.divider },
               tickLabels: { 
-                fill: theme.colors.onSurfaceVariant, 
+                fill: theme.palette.text.secondary, 
                 fontSize: 8,
                 angle: -45,
                 textAnchor: 'end'
@@ -82,9 +82,9 @@ const AlbumConcentrationChart: React.FC = () => {
             dependentAxis
             domain={[0, Math.max(...aggregateData.map(d => Number(d.count) || 0), 1)]}
             style={{
-              axis: { stroke: theme.colors.outlineVariant },
-              tickLabels: { fill: theme.colors.onSurfaceVariant, fontSize: 8 },
-              grid: { stroke: theme.colors.outlineVariant, strokeDasharray: "4, 4" }
+              axis: { stroke: theme.palette.divider },
+              tickLabels: { fill: theme.palette.text.secondary, fontSize: 8 },
+              grid: { stroke: theme.palette.divider, strokeDasharray: "4, 4" }
             }}
           />
           
@@ -101,16 +101,16 @@ const AlbumConcentrationChart: React.FC = () => {
             animate={{ duration: 500 }}
           />
         </VictoryChart>
-      </View>
+      </Box>
       
-      <View style={styles.legendContainer}>
-          <Text variant="labelSmall" style={{ opacity: 0.7 }}>Showing top 5 most frequent albums</Text>
-      </View>
-    </View>
+      <Box sx={styles.legendContainer}>
+          <Typography variant="caption" style={{ opacity: 0.7 }}>Showing top 5 most frequent albums</Typography>
+      </Box>
+    </Box>
   );
 };
 
-const styles = StyleSheet.create({
+const styles = {
   container: {
     padding: 8,
     alignItems: 'center'
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
   }
-});
+};
 
 export default AlbumConcentrationChart;
 

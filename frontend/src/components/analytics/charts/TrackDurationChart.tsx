@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
-import { useTheme, Text } from 'react-native-paper';
+import { Box } from '@mui/material';
+import { useTheme, Typography } from '@mui/material';
 import { 
   VictoryChart, 
   VictoryArea, 
@@ -8,11 +8,11 @@ import {
   VictoryAxis, 
   VictoryVoronoiContainer, 
   VictoryTooltip 
-} from 'victory-native';
+} from 'victory';
 import { GroupedRecords, Track } from '../../../types';
 import { computeAvgDuration } from '../../../utils/analyticsUtils';
 
-const { width } = Dimensions.get('window');
+const width = window.innerWidth;
 
 interface Props {
   tracks: GroupedRecords<Track>[];
@@ -45,22 +45,22 @@ const TrackDurationChart: React.FC<Props> = ({ tracks }) => {
 
   if (data.length === 0) {
     return (
-      <View style={styles.centered}>
-        <Text variant="bodyMedium">No duration data available</Text>
-      </View>
+      <Box sx={styles.centered}>
+        <Typography variant="body1">No duration data available</Typography>
+      </Box>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.summaryContainer}>
-        <Text variant="labelSmall" style={styles.summaryLabel}>Overall Average</Text>
-        <Text variant="headlineSmall" style={styles.summaryValue}>
+    <Box sx={styles.container}>
+      <Box sx={styles.summaryContainer}>
+        <Typography variant="caption" style={styles.summaryLabel}>Overall Average</Typography>
+        <Typography variant="h5" style={styles.summaryValue}>
           {formatDuration(overallAvg)}
-        </Text>
-      </View>
+        </Typography>
+      </Box>
 
-      <View style={styles.chartWrapper}>
+      <Box sx={styles.chartWrapper}>
         <VictoryChart
           width={width - 32}
           height={300}
@@ -74,10 +74,10 @@ const TrackDurationChart: React.FC<Props> = ({ tracks }) => {
               labelComponent={
                 <VictoryTooltip
                   flyoutStyle={{
-                    fill: theme.colors.surfaceVariant,
-                    stroke: theme.colors.outlineVariant,
+                    fill: theme.palette.action.hover,
+                    stroke: theme.palette.divider,
                   }}
-                  style={{ fill: theme.colors.onSurfaceVariant, fontSize: 10 }}
+                  style={{ fill: theme.palette.text.secondary, fontSize: 10 }}
                 />
               }
             />
@@ -86,8 +86,8 @@ const TrackDurationChart: React.FC<Props> = ({ tracks }) => {
           <VictoryAxis
             fixLabelOverlap
             style={{
-              axis: { stroke: theme.colors.outlineVariant },
-              tickLabels: { fill: theme.colors.onSurfaceVariant, fontSize: 8 },
+              axis: { stroke: theme.palette.divider },
+              tickLabels: { fill: theme.palette.text.secondary, fontSize: 8 },
               grid: { stroke: 'transparent' }
             }}
           />
@@ -96,9 +96,9 @@ const TrackDurationChart: React.FC<Props> = ({ tracks }) => {
             tickFormat={(t: any) => formatDuration(t)}
             domain={[0, Math.max(0, ...data.map(d => Number(d.avgDurationMs) || 0), Number(overallAvg) || 0, 1)]}
             style={{
-              axis: { stroke: theme.colors.outlineVariant },
-              tickLabels: { fill: theme.colors.onSurfaceVariant, fontSize: 8 },
-              grid: { stroke: theme.colors.outlineVariant, strokeDasharray: "4, 4" }
+              axis: { stroke: theme.palette.divider },
+              tickLabels: { fill: theme.palette.text.secondary, fontSize: 8 },
+              grid: { stroke: theme.palette.divider, strokeDasharray: "4, 4" }
             }}
           />
           
@@ -133,12 +133,12 @@ const TrackDurationChart: React.FC<Props> = ({ tracks }) => {
             />
           )}
         </VictoryChart>
-      </View>
-    </View>
+      </Box>
+    </Box>
   );
 };
 
-const styles = StyleSheet.create({
+const styles = {
   container: {
     padding: 8,
     alignItems: 'center'
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   }
-});
+};
 
 export default TrackDurationChart;
 

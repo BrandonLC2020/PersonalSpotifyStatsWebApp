@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, Dimensions, Image, ScrollView } from 'react-native';
-import { useTheme, Text, SegmentedButtons, DataTable, Avatar } from 'react-native-paper';
+import { Box, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, ToggleButton } from "@mui/material";
+import { useTheme, Typography, ToggleButtonGroup, Table, Avatar } from '@mui/material';
 import { 
   VictoryChart, 
   VictoryBar, 
@@ -9,11 +9,11 @@ import {
   VictoryStack, 
   VictoryVoronoiContainer, 
   VictoryTooltip 
-} from 'victory-native';
+} from 'victory';
 import { GroupedRecords, Artist } from '../../../types';
 import { computeLoyaltyStats, computeEntityChurn } from '../../../utils/analyticsUtils';
 
-const { width } = Dimensions.get('window');
+const width = window.innerWidth;
 const MEDAL_COLORS = ['#FFD700', '#C0C0C0', '#CD7F32'];
 
 interface Props {
@@ -34,62 +34,57 @@ const ArtistLoyaltyDashboard: React.FC<Props> = ({ artists }) => {
   );
 
   return (
-    <View style={styles.container}>
-      <SegmentedButtons
+    <Box sx={styles.container}>
+      <ToggleButtonGroup exclusive
         value={view}
-        onValueChange={value => setView(value as 'leaderboard' | 'churn')}
-        buttons={[
-          { value: 'leaderboard', label: 'Leaderboard' },
-          { value: 'churn', label: 'Churn' },
-        ]}
-        style={styles.toggle}
-      />
+        sx={styles.toggle} onChange={(event, value) => { if (value) setView(value as 'leaderboard' | 'churn'); }}
+        >
+<ToggleButton value='leaderboard'>Leaderboard</ToggleButton>
+<ToggleButton value='churn'>Churn</ToggleButton>
+</ToggleButtonGroup>
+     
 
       {view === 'leaderboard' ? (
-        <ScrollView horizontal bounces={false}>
-          <DataTable style={{ width: width * 1.2 }}>
-            <DataTable.Header>
-              <DataTable.Title style={styles.rankCol}>#</DataTable.Title>
-              <DataTable.Title style={styles.artistCol}>Artist</DataTable.Title>
-              <DataTable.Title numeric>Months</DataTable.Title>
-              <DataTable.Title numeric>Streak</DataTable.Title>
-              <DataTable.Title numeric>Avg Rank</DataTable.Title>
-            </DataTable.Header>
+        <Box sx={{ overflowY: "auto", display: "flex", flexDirection: "row" }}>
+          <TableContainer component={Paper}>
+          <Table sx={{ width: width * 1.2, tableLayout: "fixed" }}>
+            <TableHead>
+              <TableCell style={styles.rankCol}>#</TableCell>
+              <TableCell style={styles.artistCol}>Artist</TableCell>
+              <TableCell align="right">Months</TableCell>
+              <TableCell align="right">Streak</TableCell>
+              <TableCell align="right">Avg Rank</TableCell>
+            </TableHead>
 
             {loyaltyData.slice(0, 10).map((entry, index) => (
-              <DataTable.Row key={entry.id}>
-                <DataTable.Cell style={styles.rankCol}>
+              <TableRow key={entry.id}>
+                <TableCell style={styles.rankCol}>
                   {index < 3 ? (
-                    <Avatar.Text 
-                        size={24} 
-                        label={(index + 1).toString()} 
-                        style={{ backgroundColor: MEDAL_COLORS[index] }}
-                        labelStyle={{ color: '#000', fontSize: 12, fontWeight: 'bold' }}
-                    />
+                    <Avatar sx={{ width: 24, height: 24, bgcolor: MEDAL_COLORS[index], color: "#000", fontSize: 12, fontWeight: "bold" }}>{index + 1}</Avatar>
                   ) : (
-                    <Text variant="bodySmall">{index + 1}</Text>
+                    <Typography variant="body2">{index + 1}</Typography>
                   )}
-                </DataTable.Cell>
-                <DataTable.Cell style={styles.artistCol}>
-                    <View style={styles.artistCell}>
-                        {entry.image && <Image source={{ uri: entry.image }} style={styles.avatar} />}
-                        <Text variant="bodySmall" numberOfLines={1}>{entry.name}</Text>
-                    </View>
-                </DataTable.Cell>
-                <DataTable.Cell numeric>{entry.monthsAppeared}</DataTable.Cell>
-                <DataTable.Cell numeric>{entry.longestStreak}</DataTable.Cell>
-                <DataTable.Cell numeric>{entry.avgStanding}</DataTable.Cell>
-              </DataTable.Row>
+                </TableCell>
+                <TableCell style={styles.artistCol}>
+                    <Box sx={styles.artistCell}>
+                        {entry.image && <Box component="img" src={entry.image} sx={styles.avatar} />}
+                        <Typography variant="body2" noWrap>{entry.name}</Typography>
+                    </Box>
+                </TableCell>
+                <TableCell align="right">{entry.monthsAppeared}</TableCell>
+                <TableCell align="right">{entry.longestStreak}</TableCell>
+                <TableCell align="right">{entry.avgStanding}</TableCell>
+              </TableRow>
             ))}
-          </DataTable>
-        </ScrollView>
+          </Table></TableContainer>
+        </Box>
       ) : churnData.length === 0 ? (
-        <View style={styles.centered}>
-          <Text variant="bodyMedium">No historical data available</Text>
-        </View>
+        <Box sx={styles.centered}>
+          <Typography variant="body1">No historical data available</Typography>
+        </Box>
       ) : (
-        <View>
-          <View style={styles.chartWrapper}>
+        <Box>
+          <Box sx={styles.chartWrapper}>
             <VictoryChart
               width={width - 32}
               height={300}
@@ -106,10 +101,10 @@ const ArtistLoyaltyDashboard: React.FC<Props> = ({ artists }) => {
                   labelComponent={
                     <VictoryTooltip
                       flyoutStyle={{
-                        fill: theme.colors.surfaceVariant,
-                        stroke: theme.colors.outlineVariant,
+                        fill: theme.palette.action.hover,
+                        stroke: theme.palette.divider,
                       }}
-                      style={{ fill: theme.colors.onSurfaceVariant, fontSize: 10 }}
+                      style={{ fill: theme.palette.text.secondary, fontSize: 10 }}
                     />
                   }
                 />
@@ -118,8 +113,8 @@ const ArtistLoyaltyDashboard: React.FC<Props> = ({ artists }) => {
               <VictoryAxis
                 fixLabelOverlap
                 style={{
-                  axis: { stroke: theme.colors.outlineVariant },
-                  tickLabels: { fill: theme.colors.onSurfaceVariant, fontSize: 8 },
+                  axis: { stroke: theme.palette.divider },
+                  tickLabels: { fill: theme.palette.text.secondary, fontSize: 8 },
                   grid: { stroke: 'transparent' }
                 }}
               />
@@ -127,9 +122,9 @@ const ArtistLoyaltyDashboard: React.FC<Props> = ({ artists }) => {
                 dependentAxis
                 domain={[0, Math.max(0, ...churnData.map(d => (Number(d.entered) || 0) + (Number(d.exited) || 0) + (Number(d.retained) || 0)), 1)]}
                 style={{
-                  axis: { stroke: theme.colors.outlineVariant },
-                  tickLabels: { fill: theme.colors.onSurfaceVariant, fontSize: 8 },
-                  grid: { stroke: theme.colors.outlineVariant, strokeDasharray: "4, 4" }
+                  axis: { stroke: theme.palette.divider },
+                  tickLabels: { fill: theme.palette.text.secondary, fontSize: 8 },
+                  grid: { stroke: theme.palette.divider, strokeDasharray: "4, 4" }
                 }}
               />
               
@@ -164,29 +159,29 @@ const ArtistLoyaltyDashboard: React.FC<Props> = ({ artists }) => {
                 animate={{ duration: 500 }}
               />
             </VictoryChart>
-          </View>
+          </Box>
 
-          <View style={styles.legendContainer}>
-            <View style={styles.legendItem}>
-              <View style={[styles.colorDot, { backgroundColor: "#1DB954" }]} />
-              <Text variant="labelSmall">Entered</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.colorDot, { backgroundColor: "#E91E63" }]} />
-              <Text variant="labelSmall">Exited</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.colorDot, { backgroundColor: "#FF9800" }]} />
-              <Text variant="labelSmall">Retained</Text>
-            </View>
-          </View>
-        </View>
+          <Box sx={styles.legendContainer}>
+            <Box sx={styles.legendItem}>
+              <Box sx={{ ...styles.colorDot,  backgroundColor: "#1DB954"  }} />
+              <Typography variant="caption">Entered</Typography>
+            </Box>
+            <Box sx={styles.legendItem}>
+              <Box sx={{ ...styles.colorDot,  backgroundColor: "#E91E63"  }} />
+              <Typography variant="caption">Exited</Typography>
+            </Box>
+            <Box sx={styles.legendItem}>
+              <Box sx={{ ...styles.colorDot,  backgroundColor: "#FF9800"  }} />
+              <Typography variant="caption">Retained</Typography>
+            </Box>
+          </Box>
+        </Box>
       )}
-    </View>
+    </Box>
   );
 };
 
-const styles = StyleSheet.create({
+const styles = {
   container: {
     padding: 8,
   },
@@ -235,7 +230,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginRight: 4,
   }
-});
+};
 
 export default ArtistLoyaltyDashboard;
 

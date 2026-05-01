@@ -1,10 +1,10 @@
 import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
-import { useTheme, Text, SegmentedButtons, Tooltip } from 'react-native-paper';
+import { Box, ToggleButton } from "@mui/material";
+import { useTheme, Typography, ToggleButtonGroup, Tooltip } from '@mui/material';
 import { GroupedRecords, Track, Artist } from '../../../types';
 import { computePopularityHeatmap } from '../../../utils/analyticsUtils';
 
-const { width } = Dimensions.get('window');
+const width = window.innerWidth;
 
 interface Props {
   tracks: GroupedRecords<Track>[];
@@ -24,7 +24,7 @@ const PopularityHeatmap: React.FC<Props> = ({ tracks, artists }) => {
   }, [source]);
 
   const getColor = (popularity: number): string => {
-    if (popularity === 0) return theme.dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+    if (popularity === 0) return theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
     const normalized = popularity / 100;
     if (normalized < 0.33) {
       return `rgba(156, 39, 176, ${0.2 + normalized * 1.5})`;
@@ -37,80 +37,79 @@ const PopularityHeatmap: React.FC<Props> = ({ tracks, artists }) => {
 
   if (months.length === 0) {
     return (
-      <View style={styles.centered}>
-        <Text variant="bodyMedium">No heatmap data available</Text>
-      </View>
+      <Box sx={styles.centered}>
+        <Typography variant="body1">No heatmap data available</Typography>
+      </Box>
     );
   }
 
   const cellSize = 36;
 
   return (
-    <View style={styles.container}>
-      <SegmentedButtons
+    <Box sx={styles.container}>
+      <ToggleButtonGroup exclusive
         value={entityType}
-        onValueChange={value => setEntityType(value as 'tracks' | 'artists')}
-        buttons={[
-          { value: 'tracks', label: 'Tracks' },
-          { value: 'artists', label: 'Artists' },
-        ]}
-        style={styles.toggle}
-      />
+        sx={styles.toggle} onChange={(event, value) => { if (value) setEntityType(value as 'tracks' | 'artists'); }}
+        >
+<ToggleButton value='tracks'>Tracks</ToggleButton>
+<ToggleButton value='artists'>Artists</ToggleButton>
+</ToggleButtonGroup>
+     
 
-      <ScrollView horizontal bounces={false}>
-        <View style={styles.heatmapContainer}>
+      <Box sx={{ overflowY: "auto", display: "flex", flexDirection: "row" }}>
+        <Box sx={styles.heatmapContainer}>
           {/* Header row labels */}
-          <View style={[styles.row, { marginLeft: 40 }]}>
+          <Box sx={{ ...styles.row,  marginLeft: 40  }}>
             {months.map(month => (
-              <View key={month} style={[styles.headerCell, { width: cellSize }]}>
-                <Text style={styles.headerText} numberOfLines={1}>{month.split(' ')[0]}</Text>
-              </View>
+              <Box key={month} sx={{ ...styles.headerCell,  width: cellSize  }}>
+                <Typography style={styles.headerText} noWrap>{month.split(' ')[0]}</Typography>
+              </Box>
             ))}
-          </View>
+          </Box>
 
           {/* Data rows */}
           {Array.from({ length: maxStanding }, (_, i) => i + 1).map(standing => (
-            <View key={standing} style={styles.row}>
-              <View style={styles.standingLabel}>
-                <Text variant="labelSmall">#{standing}</Text>
-              </View>
+            <Box key={standing} sx={styles.row}>
+              <Box sx={styles.standingLabel}>
+                <Typography variant="caption">#{standing}</Typography>
+              </Box>
               {months.map(month => {
                 const cell = cells.find(c => c.month === month && c.standing === standing);
                 return (
                   <Tooltip key={`${month}-${standing}`} title={cell ? `${cell.name} (${cell.popularity})` : 'No data'}>
-                    <View
-                        style={[
+                    <Box
+                        sx={[
                             styles.cell,
                             {
                                 width: cellSize - 4,
                                 height: cellSize - 4,
-                                backgroundColor: cell ? getColor(cell.popularity) : (theme.dark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)')
+                                backgroundColor: cell ? getColor(cell.popularity) : (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)')
                             }
                         ]}
                     />
                   </Tooltip>
                 );
               })}
-            </View>
+            </Box>
           ))}
-        </View>
-      </ScrollView>
+        </Box>
+      </Box>
 
       {/* Legend */}
-      <View style={styles.legend}>
-        <Text variant="labelSmall">Low</Text>
-        <View style={styles.legendGradient}>
+      <Box sx={styles.legend}>
+        <Typography variant="caption">Low</Typography>
+        <Box sx={styles.legendGradient}>
           {[10, 40, 70, 100].map(v => (
-            <View key={v} style={[styles.legendStep, { backgroundColor: getColor(v) }]} />
+            <Box key={v} sx={{ ...styles.legendStep,  backgroundColor: getColor(v)  }} />
           ))}
-        </View>
-        <Text variant="labelSmall">High</Text>
-      </View>
-    </View>
+        </Box>
+        <Typography variant="caption">High</Typography>
+      </Box>
+    </Box>
   );
 };
 
-const styles = StyleSheet.create({
+const styles = {
   container: {
     padding: 8,
   },
@@ -165,6 +164,6 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 2,
   },
-});
+};
 
 export default PopularityHeatmap;

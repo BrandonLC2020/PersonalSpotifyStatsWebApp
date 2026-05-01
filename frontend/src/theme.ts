@@ -1,31 +1,47 @@
-import { MD3DarkTheme, MD3LightTheme, configureFonts } from 'react-native-paper';
+import { createTheme } from '@mui/material/styles';
 
 const fontConfig = {
-  fontFamily: 'Inter',
+  fontFamily: 'Inter, sans-serif',
 };
 
 export const spotifyGreen = '#1DB954';
 
-export const lightTheme = {
-  ...MD3LightTheme,
-  colors: {
-    ...MD3LightTheme.colors,
-    primary: spotifyGreen,
-    background: '#f0f2f5',
-    surface: '#ffffff',
-    secondary: '#535353',
-    glass: 'rgba(255, 255, 255, 0.25)',
+export const lightTheme = createTheme({
+  typography: fontConfig,
+  palette: {
+    mode: 'light',
+    primary: {
+      main: spotifyGreen,
+    },
+    background: {
+      default: '#f0f2f5',
+      paper: '#ffffff',
+    },
+    secondary: {
+      main: '#535353',
+    },
+    action: {
+      disabledBackground: 'rgba(255, 255, 255, 0.25)',
+    },
   },
-};
+});
 
-export const darkTheme = {
-  ...MD3DarkTheme,
-  colors: {
-    ...MD3DarkTheme.colors,
-    primary: spotifyGreen,
-    background: '#121212',
-    surface: '#1e1e1e',
-    secondary: '#b3b3b3',
-    glass: 'rgba(0, 0, 0, 0.4)',
+export const darkTheme = createTheme({
+  typography: fontConfig,
+  palette: {
+    mode: 'dark',
+    primary: {
+      main: spotifyGreen,
+    },
+    background: {
+      default: '#121212',
+      paper: '#1e1e1e',
+    },
+    secondary: {
+      main: '#b3b3b3',
+    },
+    action: {
+      disabledBackground: 'rgba(0, 0, 0, 0.4)',
+    },
   },
-};
+});

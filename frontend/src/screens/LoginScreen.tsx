@@ -1,29 +1,19 @@
 import React, { useState } from 'react';
 import {
-  View,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Image,
-  Dimensions,
-} from 'react-native';
-import {
-  Text,
-  TextInput,
+  Box,
+  Typography,
+  TextField,
   Button,
-  Surface,
-  HelperText,
+  Paper,
+  InputAdornment,
   IconButton,
-  useTheme,
-} from 'react-native-paper';
+  Container,
+} from '@mui/material';
+import { Visibility, VisibilityOff, MusicNote } from '@mui/icons-material';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-import { REACT_APP_API_URL } from '@env';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-const { width } = Dimensions.get('window');
-const API_URL = REACT_APP_API_URL || 'http://localhost:3001';
+const API_URL = import.meta.env.VITE_REACT_APP_API_URL || 'http://localhost:3001';
 
 const LoginScreen: React.FC = () => {
   const [password, setPassword] = useState('');
@@ -31,7 +21,6 @@ const LoginScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
-  const theme = useTheme();
 
   const handleLogin = async () => {
     if (!password) {
@@ -56,112 +45,69 @@ const LoginScreen: React.FC = () => {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Icon name="music-note" size={80} color={theme.colors.primary} />
-          <Text variant="headlineLarge" style={styles.title}>Welcome</Text>
-          <Text variant="bodyMedium" style={styles.subtitle}>
-            Enter your password to access your Spotify stats
-          </Text>
-        </View>
+    <Container component="main" maxWidth="xs" sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', justifyContent: 'center' }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 4 }}>
+        <MusicNote sx={{ fontSize: 80, color: 'primary.main' }} />
+        <Typography component="h1" variant="h4" sx={{ fontWeight: 'bold', my: 1 }}>
+          Welcome
+        </Typography>
+        <Typography variant="body1" color="text.secondary" align="center">
+          Enter your password to access your Spotify stats
+        </Typography>
+      </Box>
 
-        <Surface style={styles.surface} elevation={2}>
-          {error && (
-            <HelperText type="error" visible={!!error} style={styles.errorText}>
-              {error}
-            </HelperText>
-          )}
+      <Paper elevation={2} sx={{ p: 4, borderRadius: 4, width: '100%' }}>
+        {error && (
+          <Typography color="error" variant="body2" align="center" sx={{ mb: 2 }}>
+            {error}
+          </Typography>
+        )}
 
-          <TextInput
-            label="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={!showPassword}
-            mode="outlined"
-            style={styles.input}
-            left={<TextInput.Icon icon="lock-outline" color={theme.colors.primary} />}
-            right={
-              <TextInput.Icon
-                icon={showPassword ? "eye-off" : "eye"}
-                onPress={() => setShowPassword(!showPassword)}
-              />
-            }
-            disabled={loading}
-          />
+        <TextField
+          margin="normal"
+          required
+          fullWidth
+          label="Password"
+          type={showPassword ? 'text' : 'password'}
+          id="password"
+          autoComplete="current-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          disabled={loading}
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  aria-label="toggle password visibility"
+                  onClick={() => setShowPassword(!showPassword)}
+                  edge="end"
+                >
+                  {showPassword ? <VisibilityOff /> : <Visibility />}
+                </IconButton>
+              </InputAdornment>
+            ),
+          }}
+        />
 
-          <Button
-            mode="contained"
-            onPress={handleLogin}
-            loading={loading}
-            disabled={loading}
-            style={styles.button}
-            contentStyle={styles.buttonContent}
-          >
-            Explore Stats
-          </Button>
-        </Surface>
+        <Button
+          fullWidth
+          variant="contained"
+          color="primary"
+          onClick={handleLogin}
+          disabled={loading}
+          sx={{ mt: 3, mb: 2, py: 1.5, borderRadius: 2 }}
+        >
+          {loading ? 'Loading...' : 'Explore Stats'}
+        </Button>
+      </Paper>
 
-        <View style={styles.footer}>
-          <Text variant="bodySmall" style={{ color: theme.colors.secondary }}>
-            © {new Date().getFullYear()} Personal Spotify Stats
-          </Text>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <Box sx={{ mt: 5, mb: 2, alignItems: 'center' }}>
+        <Typography variant="body2" color="text.secondary" align="center">
+          © {new Date().getFullYear()} Personal Spotify Stats
+        </Typography>
+      </Box>
+    </Container>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#121212', // Fallback, but theme should handle it
-  },
-  scrollContent: {
-    flexGrow: 1,
-    padding: 24,
-    justifyContent: 'center',
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  title: {
-    fontWeight: 'bold',
-    marginVertical: 8,
-  },
-  subtitle: {
-    textAlign: 'center',
-    opacity: 0.7,
-  },
-  surface: {
-    padding: 24,
-    borderRadius: 16,
-    width: '100%',
-    maxWidth: 400,
-    alignSelf: 'center',
-  },
-  input: {
-    marginBottom: 8,
-  },
-  button: {
-    marginTop: 16,
-    borderRadius: 12,
-  },
-  buttonContent: {
-    paddingVertical: 8,
-  },
-  errorText: {
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  footer: {
-    marginTop: 40,
-    alignItems: 'center',
-  },
-});
 
 export default LoginScreen;

@@ -1,12 +1,12 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Dimensions, Image } from 'react-native';
-import { Text, Card, Title, Paragraph, List, Avatar, Chip, ActivityIndicator, useTheme } from 'react-native-paper';
-import { VictoryPie } from 'victory-native';
+import { Box, CardContent, CardHeader } from '@mui/material';
+import { Typography, Card, List, ListItem, ListItemAvatar, ListItemIcon, ListItemText, Avatar, Chip, CircularProgress, useTheme } from '@mui/material';
+import { VictoryPie } from 'victory';
 import SpotifyWebApi from 'spotify-web-api-js';
 import useAnalyticsData from '../../../hooks/useAnalyticsData';
 import { CHART_COLORS, getMonthLabel } from '../../../utils/chartTheme';
 
-const { width } = Dimensions.get('window');
+const width = window.innerWidth;
 
 interface Props {
   spotifyApi?: SpotifyWebApi.SpotifyWebApiJs;
@@ -87,8 +87,8 @@ const TimeMachine: React.FC<Props> = ({ spotifyApi }) => {
       }));
   }, [selectedData]);
 
-  if (loading) return <ActivityIndicator style={styles.centered} />;
-  if (error) return <View style={styles.centered}><Text style={{ color: theme.colors.error }}>{error}</Text></View>;
+  if (loading) return <CircularProgress style={styles.centered} />;
+  if (error) return <Box sx={styles.centered}><Typography style={{ color: theme.palette.error.main }}>{error}</Typography></Box>;
 
   const monthsByYear = allMonths.reduce((acc, m) => {
     if (!acc[m.year]) acc[m.year] = [];
@@ -97,45 +97,44 @@ const TimeMachine: React.FC<Props> = ({ spotifyApi }) => {
   }, {} as Record<number, typeof allMonths>);
 
   const MonthSnapshot = ({ data, label }: { data: ReturnType<typeof getMonthData>; label: string }) => {
-    if (!data) return <Text variant="bodyMedium">Select a month</Text>;
+    if (!data) return <Typography variant="body1">Select a month</Typography>;
 
     return (
-      <View>
-        <Text variant="titleLarge" style={styles.snapshotTitle}>{label}</Text>
+      <Box>
+        <Typography variant="h6" style={styles.snapshotTitle}>{label}</Typography>
 
-        <List.Section title="🎵 Top Tracks">
+        <Box>
+          <Typography variant="h6">🎵 Top Tracks</Typography>
+          <List>
           {data.tracks?.records.slice(0, 5).map((track, i) => (
-            <List.Item
-              key={track.track_id}
-              title={track.name}
-              description={`Popularity: ${track.popularity}`}
-              left={props => 
-                  albumArt[track.track_id] ? 
-                  <List.Image {...props} source={{ uri: albumArt[track.track_id] }} style={styles.trackImage} /> : 
-                  <List.Icon {...props} icon="music" />
-              }
-            />
+            <ListItem key={track.track_id}>
+              {albumArt[track.track_id] !== undefined ? 
+                <ListItemAvatar><Avatar src={albumArt[track.track_id]} sx={styles.trackImage} /></ListItemAvatar> : 
+                <ListItemIcon>music</ListItemIcon>}
+              <ListItemText primary={track.name} secondary={`Popularity: ${track.popularity}`} />
+            </ListItem>
           ))}
-        </List.Section>
+          </List>
+        </Box>
 
-        <List.Section title="🎤 Top Artists">
+        <Box>
+          <Typography variant="h6">🎤 Top Artists</Typography>
+          <List>
           {data.artists?.records.slice(0, 5).map((artist, i) => (
-            <List.Item
-              key={artist.artist_id}
-              title={artist.name}
-              left={props => 
-                artist.images?.[0]?.url ? 
-                <Avatar.Image {...props} size={32} source={{ uri: artist.images[0].url }} /> : 
-                <Avatar.Icon {...props} size={32} icon="account" />
-              }
-            />
+            <ListItem key={artist.artist_id}>
+              {artist.images?.[0]?.url !== undefined ? 
+                <ListItemAvatar><Avatar src={artist.images[0].url} sx={{ width: 32, height: 32 }} /></ListItemAvatar> : 
+                <ListItemIcon>account</ListItemIcon>}
+              <ListItemText primary={artist.name} />
+            </ListItem>
           ))}
-        </List.Section>
+          </List>
+        </Box>
 
         {genrePieData.length > 0 && (
-          <View style={styles.chartContainer}>
-            <Text variant="titleSmall" style={{ marginBottom: 16 }}>Genre Breakdown</Text>
-            <View style={{ height: 200, width: width - 64 }}>
+          <Box sx={styles.chartContainer}>
+            <Typography variant="subtitle1" style={{ marginBottom: 16 }}>Genre Breakdown</Typography>
+            <Box sx={{ height: 200, width: width - 64 }}>
                 <VictoryPie
                     data={genrePieData.map(d => ({ x: d.label, y: d.value }))}
                     colorScale={genrePieData.map(d => d.color)}
@@ -146,39 +145,40 @@ const TimeMachine: React.FC<Props> = ({ spotifyApi }) => {
                     width={width - 64}
                     animate={{ duration: 500 }}
                 />
-            </View>
-            <View style={styles.legendContainer}>
+            </Box>
+            <Box sx={styles.legendContainer}>
                 {genrePieData.map((d, i) => (
-                    <View key={d.label} style={styles.legendItem}>
-                        <View style={[styles.colorDot, { backgroundColor: d.color }]} />
-                        <Text variant="labelSmall">{d.label}</Text>
-                    </View>
+                    <Box key={d.label} sx={styles.legendItem}>
+                        <Box sx={{ ...styles.colorDot,  backgroundColor: d.color  }} />
+                        <Typography variant="caption">{d.label}</Typography>
+                    </Box>
                 ))}
-            </View>
-          </View>
+            </Box>
+          </Box>
         )}
-      </View>
+      </Box>
     );
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <Box sx={{ overflowY: "auto", ...styles.container }}>
       <Card style={styles.selectorCard}>
-        <Card.Title title="Select a Month" subtitle={compareMode ? "Comparison Active" : ""} />
-        <Card.Content>
+        <CardHeader title="Select a Month" subtitle={compareMode ? "Comparison Active" : ""} />
+        <CardContent>
             {Object.entries(monthsByYear)
             .sort(([a], [b]) => Number(b) - Number(a))
             .map(([year, months]) => (
-                <View key={year} style={styles.yearRow}>
-                    <Text variant="labelSmall">{year}</Text>
-                    <View style={styles.chipRow}>
+                <Box key={year} sx={styles.yearRow}>
+                    <Typography variant="caption">{year}</Typography>
+                    <Box sx={styles.chipRow}>
                         {months
                         .sort((a, b) => b.month - a.month)
                         .map(m => (
                         <Chip
                             key={m.key}
-                            selected={selectedMonth === m.key || comparisonMonth === m.key}
-                            onPress={() => {
+                            label={m.label.split(' ')[0]}
+                            color={selectedMonth === m.key || comparisonMonth === m.key ? "primary" : "default"}
+                            onClick={() => {
                                 if (compareMode && selectedMonth && selectedMonth !== m.key) {
                                     setComparisonMonth(m.key);
                                 } else {
@@ -187,36 +187,34 @@ const TimeMachine: React.FC<Props> = ({ spotifyApi }) => {
                                 }
                             }}
                             style={styles.chip}
-                        >
-                            {m.label.split(' ')[0]}
-                        </Chip>
+                        />
                         ))}
-                    </View>
-                </View>
+                    </Box>
+                </Box>
             ))}
-        </Card.Content>
+        </CardContent>
       </Card>
 
-      <View style={styles.snapshotContainer}>
+      <Box sx={styles.snapshotContainer}>
         <Card style={styles.snapshotCard}>
-            <Card.Content>
+            <CardContent>
                 <MonthSnapshot data={selectedData} label={selectedData?.label || ''} />
-            </Card.Content>
+            </CardContent>
         </Card>
         
         {compareMode && comparisonMonth && comparisonData && (
-             <Card style={[styles.snapshotCard, { marginTop: 16 }]}>
-                <Card.Content>
+             <Card sx={{ ...styles.snapshotCard,  marginTop: 16  }}>
+                <CardContent>
                     <MonthSnapshot data={comparisonData} label={comparisonData?.label || ''} />
-                </Card.Content>
+                </CardContent>
             </Card>
         )}
-      </View>
-    </ScrollView>
+      </Box>
+    </Box>
   );
 };
 
-const styles = StyleSheet.create({
+const styles = {
   container: {
     padding: 16,
   },
@@ -280,6 +278,6 @@ const styles = StyleSheet.create({
       borderRadius: 5,
       marginRight: 4,
   }
-});
+};
 
 export default TimeMachine;

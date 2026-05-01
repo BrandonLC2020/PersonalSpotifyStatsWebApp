@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
-import { useTheme, Text } from 'react-native-paper';
+import { Box } from '@mui/material';
+import { useTheme, Typography } from '@mui/material';
 import { 
   VictoryChart, 
   VictoryArea, 
@@ -9,12 +9,12 @@ import {
   VictoryStack, 
   VictoryVoronoiContainer, 
   VictoryTooltip,
-} from 'victory-native';
+} from 'victory';
 import { GroupedRecords, Artist } from '../../../types';
 import { computeGenreTimeline, computeGenreDiversity } from '../../../utils/analyticsUtils';
 import { CHART_COLORS } from '../../../utils/chartTheme';
 
-const { width } = Dimensions.get('window');
+const width = window.innerWidth;
 
 interface Props {
   artists: GroupedRecords<Artist>[];
@@ -37,15 +37,15 @@ const GenreDiversityChart: React.FC<Props> = ({ artists }) => {
 
   if (mergedData.length === 0) {
     return (
-      <View style={styles.centered}>
-        <Text variant="bodyMedium">No genre data available</Text>
-      </View>
+      <Box sx={styles.centered}>
+        <Typography variant="body1">No genre data available</Typography>
+      </Box>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.chartWrapper}>
+    <Box sx={styles.container}>
+      <Box sx={styles.chartWrapper}>
         <VictoryChart
           width={width - 32}
           height={300}
@@ -63,10 +63,10 @@ const GenreDiversityChart: React.FC<Props> = ({ artists }) => {
               labelComponent={
                 <VictoryTooltip
                   flyoutStyle={{
-                    fill: theme.colors.surfaceVariant,
-                    stroke: theme.colors.outlineVariant,
+                    fill: theme.palette.action.hover,
+                    stroke: theme.palette.divider,
                   }}
-                  style={{ fill: theme.colors.onSurfaceVariant, fontSize: 10 }}
+                  style={{ fill: theme.palette.text.secondary, fontSize: 10 }}
                 />
               }
             />
@@ -75,8 +75,8 @@ const GenreDiversityChart: React.FC<Props> = ({ artists }) => {
           <VictoryAxis
             fixLabelOverlap
             style={{
-              axis: { stroke: theme.colors.outlineVariant },
-              tickLabels: { fill: theme.colors.onSurfaceVariant, fontSize: 8 },
+              axis: { stroke: theme.palette.divider },
+              tickLabels: { fill: theme.palette.text.secondary, fontSize: 8 },
               grid: { stroke: 'transparent' }
             }}
           />
@@ -84,9 +84,9 @@ const GenreDiversityChart: React.FC<Props> = ({ artists }) => {
             dependentAxis
             domain={[0, Math.max(0, ...mergedData.map(d => genres.reduce((sum, g) => sum + (Number(d[g]) || 0), 0)), 1)]}
             style={{
-              axis: { stroke: theme.colors.outlineVariant },
-              tickLabels: { fill: theme.colors.onSurfaceVariant, fontSize: 8 },
-              grid: { stroke: theme.colors.outlineVariant, strokeDasharray: "4, 4" }
+              axis: { stroke: theme.palette.divider },
+              tickLabels: { fill: theme.palette.text.secondary, fontSize: 8 },
+              grid: { stroke: theme.palette.divider, strokeDasharray: "4, 4" }
             }}
           />
           
@@ -125,25 +125,25 @@ const GenreDiversityChart: React.FC<Props> = ({ artists }) => {
             animate={{ duration: 500 }}
           />
         </VictoryChart>
-      </View>
+      </Box>
 
-       <View style={styles.legendContainer}>
+       <Box sx={styles.legendContainer}>
         {topGenres.map((genre, i) => (
-            <View key={genre} style={styles.legendItem}>
-                <View style={[styles.colorDot, { backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }]} />
-                <Text variant="labelSmall" numberOfLines={1}>{genre}</Text>
-            </View>
+            <Box key={genre} sx={styles.legendItem}>
+                <Box sx={{ ...styles.colorDot,  backgroundColor: CHART_COLORS[i % CHART_COLORS.length]  }} />
+                <Typography variant="caption" noWrap>{genre}</Typography>
+            </Box>
         ))}
-         <View style={styles.legendItem}>
-          <View style={[styles.colorDot, { backgroundColor: "#FF9800" }]} />
-          <Text variant="labelSmall">Diversity</Text>
-        </View>
-      </View>
-    </View>
+         <Box sx={styles.legendItem}>
+          <Box sx={{ ...styles.colorDot,  backgroundColor: "#FF9800"  }} />
+          <Typography variant="caption">Diversity</Typography>
+        </Box>
+      </Box>
+    </Box>
   );
 };
 
-const styles = StyleSheet.create({
+const styles = {
   container: {
     padding: 8,
     alignItems: 'center'
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginRight: 4,
   }
-});
+};
 
 export default GenreDiversityChart;
 

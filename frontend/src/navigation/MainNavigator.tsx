@@ -1,62 +1,79 @@
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
-import { View } from 'react-native';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LoginScreen from '../screens/LoginScreen';
 import CurrentSection from './CurrentSection';
 import MonthlySection from './MonthlySection';
 import AnalyticsDashboard from '../components/analytics/AnalyticsDashboard';
 import useSpotifyWeb from '../hooks/useSpotifyWeb';
-import { ActivityIndicator } from 'react-native-paper';
+import { Box, CircularProgress, BottomNavigation, BottomNavigationAction, Paper } from '@mui/material';
+import { MusicNote, CalendarToday, BarChart } from '@mui/icons-material';
 
-const Tab = createBottomTabNavigator();
-const Stack = createNativeStackNavigator();
+function BottomNav() {
+  const navigate = useNavigate();
+  const location = useLocation();
 
-function TabNavigator({ spotifyApi }: { spotifyApi: any }) {
+  const getActiveValue = () => {
+    if (location.pathname.startsWith('/monthly')) return 1;
+    if (location.pathname.startsWith('/analytics')) return 2;
+    return 0; // Default to /current
+  };
+
   return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ color, size }) => {
-          let iconName: string = 'music';
-          if (route.name === 'Monthly') iconName = 'calendar';
-          else if (route.name === 'Analytics') iconName = 'chart-bar';
-          return <Icon name={iconName} size={size} color={color} />;
-        },
-      })}
-    >
-      <Tab.Screen name="Current" component={CurrentSection} />
-      <Tab.Screen name="Monthly" component={MonthlySection} />
-      <Tab.Screen name="Analytics" component={AnalyticsDashboard} />
-    </Tab.Navigator>
+    <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50 }} elevation={3}>
+      <BottomNavigation
+        showLabels
+        value={getActiveValue()}
+        onChange={(event, newValue) => {
+          if (newValue === 0) navigate('/current');
+          else if (newValue === 1) navigate('/monthly');
+          else if (newValue === 2) navigate('/analytics');
+        }}
+      >
+        <BottomNavigationAction label="Current" icon={<MusicNote />} />
+        <BottomNavigationAction label="Monthly" icon={<CalendarToday />} />
+        <BottomNavigationAction label="Analytics" icon={<BarChart />} />
+      </BottomNavigation>
+    </Paper>
+  );
+}
+
+function ProtectedRoutes() {
+  return (
+    <Box sx={{ pb: 7 }}>
+      <Routes>
+        <Route path="/current/*" element={<CurrentSection />} />
+        <Route path="/monthly/*" element={<MonthlySection />} />
+        <Route path="/analytics/*" element={<AnalyticsDashboard />} />
+        <Route path="*" element={<Navigate to="/current" replace />} />
+      </Routes>
+      <BottomNav />
+    </Box>
   );
 }
 
 export default function MainNavigator() {
   const { isAuthenticated } = useAuth();
-  const { spotifyApi, loading } = useSpotifyWeb();
+  const { loading } = useSpotifyWeb();
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" />
-      </View>
+      <Box sx={{ display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center' }}>
+        <CircularProgress />
+      </Box>
     );
   }
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {isAuthenticated ? (
-          <Stack.Screen name="Main">
-            {() => <TabNavigator spotifyApi={spotifyApi} />}
-          </Stack.Screen>
-        ) : (
-          <Stack.Screen name="Login" component={LoginScreen} />
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+    <BrowserRouter>
+      {isAuthenticated ? (
+        <ProtectedRoutes />
+      ) : (
+        <Routes>
+          <Route path="/login" element={<LoginScreen />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      )}
+    </BrowserRouter>
   );
 }

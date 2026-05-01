@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, FlatList, ScrollView, Image } from 'react-native';
-import { Text, ActivityIndicator, List, useTheme, Surface, Card } from 'react-native-paper';
+import { Box, Typography, CircularProgress, List, ListItem, ListItemAvatar, ListItemText, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import api from '../../utils/api';
 import useSpotifyWeb from '../../hooks/useSpotifyWeb';
 
@@ -24,7 +24,6 @@ const MonthlyTopTracks = () => {
   const [error, setError] = useState<string | null>(null);
   const [albumArt, setAlbumArt] = useState<Record<string, string>>({});
   const { spotifyApi } = useSpotifyWeb();
-  const theme = useTheme();
 
   useEffect(() => {
     const fetchTracksAndArt = async () => {
@@ -37,7 +36,6 @@ const MonthlyTopTracks = () => {
         setGroupedTracks(sortedData);
         setError(null);
 
-        // Fetch album art if Spotify API is available
         if (spotifyApi && response.data.length > 0) {
           const allTrackIds = response.data.flatMap(group => group.records.map(track => track.track_id));
           const chunk = 50;
@@ -71,71 +69,80 @@ const MonthlyTopTracks = () => {
   };
 
   if (loading) {
-    return <ActivityIndicator style={styles.centered} size="large" />;
+    return <Box sx={styles.centered}><CircularProgress size={60} /></Box>;
   }
 
   if (error) {
     return (
-      <View style={styles.centered}>
-        <Text style={{ color: theme.colors.error }}>{error}</Text>
-      </View>
+      <Box sx={styles.centered}>
+        <Typography color="error">{error}</Typography>
+      </Box>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <Text variant="headlineSmall" style={styles.title}>Monthly Top Tracks</Text>
+    <Box sx={styles.container}>
+      <Typography variant="h5" sx={styles.title}>Monthly Top Tracks</Typography>
       {groupedTracks.map((group, groupIndex) => (
-        <List.Accordion
-          key={`${group.year}-${group.month}`}
-          title={`${getMonthName(group.month)} ${group.year}`}
-          left={props => <List.Icon {...props} icon="calendar" />}
-        >
-          {group.records.map((track, index) => (
-            <List.Item
-              key={track.track_id}
-              title={track.name}
-              description={`Popularity: ${track.popularity}`}
-              left={props => (
-                <Image
-                  source={{ uri: albumArt[track.track_id] || 'https://via.placeholder.com/150' }}
-                  style={styles.thumbnail}
-                />
-              )}
-              right={props => <Text style={styles.rankText}>#{index + 1}</Text>}
-            />
-          ))}
-        </List.Accordion>
+        <Accordion key={`${group.year}-${group.month}`}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="h6">{`${getMonthName(group.month)} ${group.year}`}</Typography>
+          </AccordionSummary>
+          <AccordionDetails sx={{ p: 0 }}>
+            <List>
+              {group.records.map((track, index) => (
+                <ListItem key={track.track_id} divider>
+                  <Typography sx={styles.rankText}>#{index + 1}</Typography>
+                  <ListItemAvatar sx={{ ml: 1, mr: 2 }}>
+                    <Box component="img"
+                      src={albumArt[track.track_id] || 'https://via.placeholder.com/150'}
+                      sx={styles.thumbnail}
+                    />
+                  </ListItemAvatar>
+                  <ListItemText 
+                    primary={track.name} 
+                    secondary={`Popularity: ${track.popularity}`} 
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </AccordionDetails>
+        </Accordion>
       ))}
-    </ScrollView>
+    </Box>
   );
 };
 
-const styles = StyleSheet.create({
+const styles = {
   container: {
     flex: 1,
+    overflowY: "auto",
+    pb: 10,
   },
   title: {
-    padding: 16,
+    p: 2,
     fontWeight: 'bold',
   },
   centered: {
-    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    minHeight: '50vh',
+    p: 3,
   },
   thumbnail: {
     width: 48,
     height: 48,
     borderRadius: 4,
-    marginLeft: 8,
+    objectFit: 'cover' as const,
   },
   rankText: {
-    alignSelf: 'center',
-    marginRight: 16,
+    fontWeight: 'bold',
     opacity: 0.6,
+    width: 30,
+    textAlign: "center",
   },
-});
+};
 
 export default MonthlyTopTracks;

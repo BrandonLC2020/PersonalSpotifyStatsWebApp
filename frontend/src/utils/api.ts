@@ -1,18 +1,15 @@
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { REACT_APP_API_URL } from '@env';
 
-const API_URL = REACT_APP_API_URL || 'http://localhost:3001';
+const API_URL = import.meta.env.VITE_REACT_APP_API_URL || 'http://localhost:3001';
 
 const api = axios.create({
   baseURL: API_URL,
 });
 
-// Add a request interceptor to include the auth token
 api.interceptors.request.use(
-  async (config) => {
+  (config) => {
     try {
-      const token = await AsyncStorage.getItem('auth_token');
+      const token = localStorage.getItem('auth_token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -26,15 +23,12 @@ api.interceptors.request.use(
   }
 );
 
-// Add a response interceptor to handle 401 Unauthorized errors
 api.interceptors.response.use(
   (response) => response,
-  async (error) => {
+  (error) => {
     if (error.response?.status === 401) {
-      // Clear token if unauthorized
       try {
-        await AsyncStorage.removeItem('auth_token');
-        // Redirection should be handled by the AuthProvider/MainNavigator state change
+        localStorage.removeItem('auth_token');
       } catch (e) {
         console.error('Failed to clear token', e);
       }

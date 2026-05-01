@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
-import { useTheme, Text } from 'react-native-paper';
+import { Box } from '@mui/material';
+import { useTheme, Typography } from '@mui/material';
 import { 
   VictoryChart, 
   VictoryBar, 
@@ -9,11 +9,11 @@ import {
   VictoryStack, 
   VictoryVoronoiContainer, 
   VictoryTooltip 
-} from 'victory-native';
+} from 'victory';
 import { GroupedRecords, Track } from '../../../types';
 import { computeExplicitRatio } from '../../../utils/analyticsUtils';
 
-const { width } = Dimensions.get('window');
+const width = window.innerWidth;
 
 interface Props {
   tracks: GroupedRecords<Track>[];
@@ -34,15 +34,15 @@ const ExplicitContentChart: React.FC<Props> = ({ tracks }) => {
 
   if (data.length === 0) {
     return (
-      <View style={styles.centered}>
-        <Text variant="bodyMedium">No explicit data available</Text>
-      </View>
+      <Box sx={styles.centered}>
+        <Typography variant="body1">No explicit data available</Typography>
+      </Box>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.chartWrapper}>
+    <Box sx={styles.container}>
+      <Box sx={styles.chartWrapper}>
         <VictoryChart
           width={width - 32}
           height={300}
@@ -59,10 +59,10 @@ const ExplicitContentChart: React.FC<Props> = ({ tracks }) => {
               labelComponent={
                 <VictoryTooltip
                   flyoutStyle={{
-                    fill: theme.colors.surfaceVariant,
-                    stroke: theme.colors.outlineVariant,
+                    fill: theme.palette.action.hover,
+                    stroke: theme.palette.divider,
                   }}
-                  style={{ fill: theme.colors.onSurfaceVariant, fontSize: 10 }}
+                  style={{ fill: theme.palette.text.secondary, fontSize: 10 }}
                 />
               }
             />
@@ -71,8 +71,8 @@ const ExplicitContentChart: React.FC<Props> = ({ tracks }) => {
           <VictoryAxis
             fixLabelOverlap
             style={{
-              axis: { stroke: theme.colors.outlineVariant },
-              tickLabels: { fill: theme.colors.onSurfaceVariant, fontSize: 8 },
+              axis: { stroke: theme.palette.divider },
+              tickLabels: { fill: theme.palette.text.secondary, fontSize: 8 },
               grid: { stroke: 'transparent' }
             }}
           />
@@ -80,9 +80,9 @@ const ExplicitContentChart: React.FC<Props> = ({ tracks }) => {
             dependentAxis
             domain={[0, Math.max(...data.map(d => (Number(d.explicit) || 0) + (Number(d.clean) || 0)), 100)]}
             style={{
-              axis: { stroke: theme.colors.outlineVariant },
-              tickLabels: { fill: theme.colors.onSurfaceVariant, fontSize: 8 },
-              grid: { stroke: theme.colors.outlineVariant, strokeDasharray: "4, 4" }
+              axis: { stroke: theme.palette.divider },
+              tickLabels: { fill: theme.palette.text.secondary, fontSize: 8 },
+              grid: { stroke: theme.palette.divider, strokeDasharray: "4, 4" }
             }}
           />
           
@@ -117,27 +117,27 @@ const ExplicitContentChart: React.FC<Props> = ({ tracks }) => {
             animate={{ duration: 500 }}
           />
         </VictoryChart>
-      </View>
+      </Box>
       
-      <View style={styles.legendContainer}>
-        <View style={styles.legendItem}>
-          <View style={[styles.colorDot, { backgroundColor: "#E91E63" }]} />
-          <Text variant="labelSmall">Explicit</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.colorDot, { backgroundColor: "#42A5F5" }]} />
-          <Text variant="labelSmall">Clean</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.colorDot, { backgroundColor: "#FF9800" }]} />
-          <Text variant="labelSmall">Explicit %</Text>
-        </View>
-      </View>
-    </View>
+      <Box sx={styles.legendContainer}>
+        <Box sx={styles.legendItem}>
+          <Box sx={{ ...styles.colorDot,  backgroundColor: "#E91E63"  }} />
+          <Typography variant="caption">Explicit</Typography>
+        </Box>
+        <Box sx={styles.legendItem}>
+          <Box sx={{ ...styles.colorDot,  backgroundColor: "#42A5F5"  }} />
+          <Typography variant="caption">Clean</Typography>
+        </Box>
+        <Box sx={styles.legendItem}>
+          <Box sx={{ ...styles.colorDot,  backgroundColor: "#FF9800"  }} />
+          <Typography variant="caption">Explicit %</Typography>
+        </Box>
+      </Box>
+    </Box>
   );
 };
 
-const styles = StyleSheet.create({
+const styles = {
   container: {
     padding: 8,
     alignItems: 'center'
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginRight: 4,
   }
-});
+};
 
 export default ExplicitContentChart;
 

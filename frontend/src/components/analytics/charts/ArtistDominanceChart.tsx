@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
-import { useTheme, Text, ActivityIndicator } from 'react-native-paper';
+import { Box } from '@mui/material';
+import { useTheme, Typography, CircularProgress } from '@mui/material';
 import { 
   VictoryChart, 
   VictoryBar, 
@@ -8,11 +8,11 @@ import {
   VictoryStack, 
   VictoryVoronoiContainer, 
   VictoryTooltip 
-} from 'victory-native';
+} from 'victory';
 import { useArtistTrackDominance } from '../../../hooks/useAnalyticsApi';
 import { CHART_COLORS } from '../../../utils/chartTheme';
 
-const { width } = Dimensions.get('window');
+const width = window.innerWidth;
 
 const ArtistDominanceChart: React.FC = () => {
   const theme = useTheme();
@@ -58,13 +58,13 @@ const ArtistDominanceChart: React.FC = () => {
     return { chartData: formattedData, topArtists: [...artistsList, 'Other'] };
   }, [data]);
 
-  if (loading) return <View style={styles.centered}><ActivityIndicator /></View>;
-  if (error) return <View style={styles.centered}><Text style={{ color: theme.colors.error }}>{error}</Text></View>;
+  if (loading) return <Box sx={styles.centered}><CircularProgress /></Box>;
+  if (error) return <Box sx={styles.centered}><Typography style={{ color: theme.palette.error.main }}>{error}</Typography></Box>;
   if (!data || data.length === 0) return null;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.chartWrapper}>
+    <Box sx={styles.container}>
+      <Box sx={styles.chartWrapper}>
         <VictoryChart
           width={width - 32}
           height={300}
@@ -79,10 +79,10 @@ const ArtistDominanceChart: React.FC = () => {
               labelComponent={
                 <VictoryTooltip
                   flyoutStyle={{
-                    fill: theme.colors.surfaceVariant,
-                    stroke: theme.colors.outlineVariant,
+                    fill: theme.palette.action.hover,
+                    stroke: theme.palette.divider,
                   }}
-                  style={{ fill: theme.colors.onSurfaceVariant, fontSize: 10 }}
+                  style={{ fill: theme.palette.text.secondary, fontSize: 10 }}
                 />
               }
             />
@@ -91,17 +91,17 @@ const ArtistDominanceChart: React.FC = () => {
           <VictoryAxis
             fixLabelOverlap
             style={{
-              axis: { stroke: theme.colors.outlineVariant },
-              tickLabels: { fill: theme.colors.onSurfaceVariant, fontSize: 8 },
+              axis: { stroke: theme.palette.divider },
+              tickLabels: { fill: theme.palette.text.secondary, fontSize: 8 },
               grid: { stroke: 'transparent' }
             }}
           />
           <VictoryAxis
             dependentAxis
             style={{
-              axis: { stroke: theme.colors.outlineVariant },
-              tickLabels: { fill: theme.colors.onSurfaceVariant, fontSize: 8 },
-              grid: { stroke: theme.colors.outlineVariant, strokeDasharray: "4, 4" }
+              axis: { stroke: theme.palette.divider },
+              tickLabels: { fill: theme.palette.text.secondary, fontSize: 8 },
+              grid: { stroke: theme.palette.divider, strokeDasharray: "4, 4" }
             }}
           />
           
@@ -118,21 +118,21 @@ const ArtistDominanceChart: React.FC = () => {
             ))}
           </VictoryStack>
         </VictoryChart>
-      </View>
+      </Box>
 
-       <View style={styles.legendContainer}>
+       <Box sx={styles.legendContainer}>
         {topArtists.map((artist, i) => (
-            <View key={artist} style={styles.legendItem}>
-                <View style={[styles.colorDot, { backgroundColor: i < CHART_COLORS.length ? CHART_COLORS[i] : "#666" }]} />
-                <Text variant="labelSmall" numberOfLines={1}>{artist}</Text>
-            </View>
+            <Box key={artist} sx={styles.legendItem}>
+                <Box sx={{ ...styles.colorDot,  backgroundColor: i < CHART_COLORS.length ? CHART_COLORS[i] : "#666"  }} />
+                <Typography variant="caption" noWrap>{artist}</Typography>
+            </Box>
         ))}
-      </View>
-    </View>
+      </Box>
+    </Box>
   );
 };
 
-const styles = StyleSheet.create({
+const styles = {
   container: {
     padding: 8,
     alignItems: 'center'
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginRight: 4,
   }
-});
+};
 
 export default ArtistDominanceChart;
 

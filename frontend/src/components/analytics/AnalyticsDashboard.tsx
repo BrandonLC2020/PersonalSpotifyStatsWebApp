@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
-import { Text, Card, ActivityIndicator, useTheme } from 'react-native-paper';
+import { Box, CardContent, CardHeader } from '@mui/material';
+import { Typography, Card, CircularProgress, useTheme } from '@mui/material';
 import useAnalyticsData from '../../hooks/useAnalyticsData';
 import RankingMovementChart from './charts/RankingMovementChart';
 import GenreDiversityChart from './charts/GenreDiversityChart';
@@ -12,14 +12,14 @@ const AnalyticsDashboard = () => {
   const theme = useTheme();
 
   if (loading) {
-    return <ActivityIndicator style={styles.centered} size="large" />;
+    return <CircularProgress style={styles.centered} size="large" />;
   }
 
   if (error) {
     return (
-      <View style={styles.centered}>
-        <Text style={{ color: theme.colors.error }}>{error}</Text>
-      </View>
+      <Box sx={styles.centered}>
+        <Typography style={{ color: theme.palette.error.main }}>{error}</Typography>
+      </Box>
     );
   }
 
@@ -28,67 +28,67 @@ const AnalyticsDashboard = () => {
   const uniqueArtists = new Set(artists.flatMap(g => g.records.map(r => r.artist_id))).size;
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text variant="headlineLarge" style={styles.title}>Your Stats</Text>
-        <Text variant="bodyMedium" style={styles.subtitle}>
+    <Box sx={{ overflowY: "auto", ...styles.container }}>
+      <Box sx={styles.header}>
+        <Typography variant="h4" style={styles.title}>Your Stats</Typography>
+        <Typography variant="body1" sx={styles.subtitle}>
           Deep insights into your music taste across {totalMonths} months of data
-        </Text>
-      </View>
+        </Typography>
+      </Box>
 
-      <View style={styles.statsRow}>
+      <Box sx={styles.statsRow}>
         <Card style={styles.statCard}>
-          <Card.Content>
-            <Text variant="headlineMedium" style={styles.statValue}>{uniqueTracks}</Text>
-            <Text variant="bodySmall">Tracks</Text>
-          </Card.Content>
+          <CardContent>
+            <Typography variant="h5" style={styles.statValue}>{uniqueTracks}</Typography>
+            <Typography variant="body2">Tracks</Typography>
+          </CardContent>
         </Card>
         <Card style={styles.statCard}>
-          <Card.Content>
-            <Text variant="headlineMedium" style={styles.statValue}>{uniqueArtists}</Text>
-            <Text variant="bodySmall">Artists</Text>
-          </Card.Content>
+          <CardContent>
+            <Typography variant="h5" style={styles.statValue}>{uniqueArtists}</Typography>
+            <Typography variant="body2">Artists</Typography>
+          </CardContent>
         </Card>
-      </View>
+      </Box>
 
       <Card style={styles.chartCard}>
-        <Card.Title title="Ranking Movement" subtitle="Top track and artist history" />
-        <Card.Content>
+        <CardHeader title="Ranking Movement" subtitle="Top track and artist history" />
+        <CardContent>
             <RankingMovementChart tracks={tracks} artists={artists} />
-        </Card.Content>
+        </CardContent>
       </Card>
 
       <Card style={styles.chartCard}>
-        <Card.Title title="Explicit Content" subtitle="Ratio of explicit vs clean tracks" />
-        <Card.Content>
+        <CardHeader title="Explicit Content" subtitle="Ratio of explicit vs clean tracks" />
+        <CardContent>
             <ExplicitContentChart tracks={tracks} />
-        </Card.Content>
+        </CardContent>
       </Card>
 
       <Card style={styles.chartCard}>
-        <Card.Title title="Genre Diversity" subtitle="Distribution of your music taste" />
-        <Card.Content>
+        <CardHeader title="Genre Diversity" subtitle="Distribution of your music taste" />
+        <CardContent>
             <GenreDiversityChart artists={artists} />
-        </Card.Content>
+        </CardContent>
       </Card>
 
       <Card style={styles.chartCard}>
-        <Card.Title title="Artist Dominance" subtitle="Share of top tracks by artist" />
-        <Card.Content>
+        <CardHeader title="Artist Dominance" subtitle="Share of top tracks by artist" />
+        <CardContent>
             <ArtistDominanceChart />
-        </Card.Content>
+        </CardContent>
       </Card>
 
-      <View style={styles.footer}>
-        <Text variant="labelSmall" style={styles.footerText}>
+      <Box sx={styles.footer}>
+        <Typography variant="caption" style={styles.footerText}>
             Personal Spotify Stats &copy; {new Date().getFullYear()}
-        </Text>
-      </View>
-    </ScrollView>
+        </Typography>
+      </Box>
+    </Box>
   );
 };
 
-const styles = StyleSheet.create({
+const styles = {
   container: {
     flex: 1,
   },
@@ -134,6 +134,6 @@ const styles = StyleSheet.create({
   footerText: {
     opacity: 0.5,
   },
-});
+};
 
 export default AnalyticsDashboard;

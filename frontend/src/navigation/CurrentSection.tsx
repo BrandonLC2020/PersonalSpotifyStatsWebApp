@@ -1,25 +1,35 @@
 import React from 'react';
-import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
-import { useTheme } from 'react-native-paper';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { Tabs, Tab, Box } from '@mui/material';
 import CurrentTopTracks from '../components/current/CurrentTopTracks';
 import CurrentTopArtists from '../components/current/CurrentTopArtists';
 
-const Tab = createMaterialTopTabNavigator();
-
 export default function CurrentSection() {
-  const theme = useTheme();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const currentTab = location.pathname.endsWith('/artists') ? 1 : 0;
+
+  const handleChange = (event: React.SyntheticEvent, newValue: number) => {
+    if (newValue === 0) navigate('songs');
+    else if (newValue === 1) navigate('artists');
+  };
 
   return (
-    <Tab.Navigator
-      screenOptions={{
-        tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: theme.colors.secondary,
-        tabBarStyle: { backgroundColor: theme.colors.background },
-        tabBarIndicatorStyle: { backgroundColor: theme.colors.primary },
-      }}
-    >
-      <Tab.Screen name="Songs" component={CurrentTopTracks} />
-      <Tab.Screen name="Artists" component={CurrentTopArtists} />
-    </Tab.Navigator>
+    <Box sx={{ width: '100%' }}>
+      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+        <Tabs value={currentTab} onChange={handleChange} variant="fullWidth">
+          <Tab label="Songs" />
+          <Tab label="Artists" />
+        </Tabs>
+      </Box>
+      <Box sx={{ p: 2 }}>
+        <Routes>
+          <Route path="songs" element={<CurrentTopTracks />} />
+          <Route path="artists" element={<CurrentTopArtists />} />
+          <Route path="*" element={<Navigate to="songs" replace />} />
+        </Routes>
+      </Box>
+    </Box>
   );
 }

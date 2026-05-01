@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
-import { SegmentedButtons, useTheme, Text } from 'react-native-paper';
+import { Box, ToggleButton } from "@mui/material";
+import { ToggleButtonGroup, useTheme, Typography } from '@mui/material';
 import { 
   VictoryChart, 
   VictoryLine, 
@@ -9,12 +9,12 @@ import {
   VictoryTooltip,
   VictoryScatter,
   VictoryGroup
-} from 'victory-native';
+} from 'victory';
 import { GroupedRecords, Track, Artist } from '../../../types';
 import { computeRankingTimeline } from '../../../utils/analyticsUtils';
 import { CHART_COLORS } from '../../../utils/chartTheme';
 
-const { width } = Dimensions.get('window');
+const width = window.innerWidth;
 
 interface Props {
   tracks: GroupedRecords<Track>[];
@@ -33,9 +33,9 @@ const RankingMovementChart: React.FC<Props> = ({ tracks, artists }) => {
 
   if (data.length === 0) {
     return (
-      <View style={styles.centered}>
-        <Text variant="bodyMedium">No ranking data available</Text>
-      </View>
+      <Box sx={styles.centered}>
+        <Typography variant="body1">No ranking data available</Typography>
+      </Box>
     );
   }
 
@@ -43,18 +43,17 @@ const RankingMovementChart: React.FC<Props> = ({ tracks, artists }) => {
   const topEntities = entities.slice(0, 5);
 
   return (
-    <View style={styles.container}>
-      <SegmentedButtons
+    <Box sx={styles.container}>
+      <ToggleButtonGroup exclusive
         value={entityType}
-        onValueChange={value => setEntityType(value as 'tracks' | 'artists')}
-        buttons={[
-          { value: 'tracks', label: 'Tracks' },
-          { value: 'artists', label: 'Artists' },
-        ]}
-        style={styles.toggle}
-      />
+        sx={styles.toggle} onChange={(event, value) => { if (value) setEntityType(value as 'tracks' | 'artists'); }}
+        >
+<ToggleButton value='tracks'>Tracks</ToggleButton>
+<ToggleButton value='artists'>Artists</ToggleButton>
+</ToggleButtonGroup>
+     
 
-      <View style={styles.chartWrapper}>
+      <Box sx={styles.chartWrapper}>
         <VictoryChart
           width={width - 32}
           height={300}
@@ -69,10 +68,10 @@ const RankingMovementChart: React.FC<Props> = ({ tracks, artists }) => {
               labelComponent={
                 <VictoryTooltip
                   flyoutStyle={{
-                    fill: theme.colors.surfaceVariant,
-                    stroke: theme.colors.outlineVariant,
+                    fill: theme.palette.action.hover,
+                    stroke: theme.palette.divider,
                   }}
-                  style={{ fill: theme.colors.onSurfaceVariant, fontSize: 10 }}
+                  style={{ fill: theme.palette.text.secondary, fontSize: 10 }}
                 />
               }
             />
@@ -81,8 +80,8 @@ const RankingMovementChart: React.FC<Props> = ({ tracks, artists }) => {
           <VictoryAxis
             fixLabelOverlap
             style={{
-              axis: { stroke: theme.colors.outlineVariant },
-              tickLabels: { fill: theme.colors.onSurfaceVariant, fontSize: 8 },
+              axis: { stroke: theme.palette.divider },
+              tickLabels: { fill: theme.palette.text.secondary, fontSize: 8 },
               grid: { stroke: 'transparent' }
             }}
           />
@@ -92,9 +91,9 @@ const RankingMovementChart: React.FC<Props> = ({ tracks, artists }) => {
             domain={[1, 5]}
             tickValues={[1, 2, 3, 4, 5]}
             style={{
-              axis: { stroke: theme.colors.outlineVariant },
-              tickLabels: { fill: theme.colors.onSurfaceVariant, fontSize: 8 },
-              grid: { stroke: theme.colors.outlineVariant, strokeDasharray: "4, 4" }
+              axis: { stroke: theme.palette.divider },
+              tickLabels: { fill: theme.palette.text.secondary, fontSize: 8 },
+              grid: { stroke: theme.palette.divider, strokeDasharray: "4, 4" }
             }}
           />
           {topEntities.map((entity, i) => {
@@ -131,21 +130,21 @@ const RankingMovementChart: React.FC<Props> = ({ tracks, artists }) => {
             );
           })}
         </VictoryChart>
-      </View>
+      </Box>
       
-      <View style={styles.legendContainer}>
+      <Box sx={styles.legendContainer}>
         {topEntities.map((name, i) => (
-            <View key={name} style={styles.legendItem}>
-                <View style={[styles.colorDot, { backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }]} />
-                <Text variant="labelSmall" numberOfLines={1} style={styles.legendText}>{name}</Text>
-            </View>
+            <Box key={name} sx={styles.legendItem}>
+                <Box sx={{ ...styles.colorDot,  backgroundColor: CHART_COLORS[i % CHART_COLORS.length]  }} />
+                <Typography variant="caption" noWrap style={styles.legendText}>{name}</Typography>
+            </Box>
         ))}
-      </View>
-    </View>
+      </Box>
+    </Box>
   );
 };
 
-const styles = StyleSheet.create({
+const styles = {
   container: {
     padding: 8,
     alignItems: 'center'
@@ -184,7 +183,7 @@ const styles = StyleSheet.create({
   legendText: {
       maxWidth: 100,
   }
-});
+};
 
 export default RankingMovementChart;
 

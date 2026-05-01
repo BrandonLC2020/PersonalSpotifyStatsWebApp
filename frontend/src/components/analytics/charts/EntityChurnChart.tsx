@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
-import { useTheme, Text, ActivityIndicator, SegmentedButtons } from 'react-native-paper';
+import { Box, ToggleButton } from "@mui/material";
+import { useTheme, Typography, CircularProgress, ToggleButtonGroup } from '@mui/material';
 import { 
   VictoryChart, 
   VictoryBar, 
@@ -8,10 +8,10 @@ import {
   VictoryGroup, 
   VictoryVoronoiContainer, 
   VictoryTooltip 
-} from 'victory-native';
+} from 'victory';
 import { useEntityChurn } from '../../../hooks/useAnalyticsApi';
 
-const { width } = Dimensions.get('window');
+const width = window.innerWidth;
 
 const EntityChurnChart: React.FC = () => {
   const theme = useTheme();
@@ -28,24 +28,23 @@ const EntityChurnChart: React.FC = () => {
     }));
   }, [data]);
 
-  if (loading) return <View style={styles.centered}><ActivityIndicator /></View>;
-  if (error) return <View style={styles.centered}><Text style={{ color: theme.colors.error }}>{error}</Text></View>;
+  if (loading) return <Box sx={styles.centered}><CircularProgress /></Box>;
+  if (error) return <Box sx={styles.centered}><Typography style={{ color: theme.palette.error.main }}>{error}</Typography></Box>;
   if (!data || data.length === 0) return null;
 
   return (
-    <View style={styles.container}>
-       <SegmentedButtons
+    <Box sx={styles.container}>
+       <ToggleButtonGroup exclusive
         value={type}
-        onValueChange={value => setType(value as 'tracks' | 'artists' | 'albums')}
-        buttons={[
-          { value: 'tracks', label: 'Tracks' },
-          { value: 'artists', label: 'Artists' },
-          { value: 'albums', label: 'Albums' },
-        ]}
-        style={styles.toggle}
-      />
+        sx={styles.toggle} onChange={(event, value) => { if (value) setType(value as 'tracks' | 'artists' | 'albums'); }}
+        >
+<ToggleButton value='tracks'>Tracks</ToggleButton>
+<ToggleButton value='artists'>Artists</ToggleButton>
+<ToggleButton value='albums'>Albums</ToggleButton>
+</ToggleButtonGroup>
+     
 
-      <View style={styles.chartWrapper}>
+      <Box sx={styles.chartWrapper}>
         <VictoryChart
           width={width - 32}
           height={350}
@@ -60,10 +59,10 @@ const EntityChurnChart: React.FC = () => {
               labelComponent={
                 <VictoryTooltip
                   flyoutStyle={{
-                    fill: theme.colors.surfaceVariant,
-                    stroke: theme.colors.outlineVariant,
+                    fill: theme.palette.action.hover,
+                    stroke: theme.palette.divider,
                   }}
-                  style={{ fill: theme.colors.onSurfaceVariant, fontSize: 10 }}
+                  style={{ fill: theme.palette.text.secondary, fontSize: 10 }}
                 />
               }
             />
@@ -72,8 +71,8 @@ const EntityChurnChart: React.FC = () => {
           <VictoryAxis
             fixLabelOverlap
             style={{
-              axis: { stroke: theme.colors.outlineVariant },
-              tickLabels: { fill: theme.colors.onSurfaceVariant, fontSize: 8 },
+              axis: { stroke: theme.palette.divider },
+              tickLabels: { fill: theme.palette.text.secondary, fontSize: 8 },
               grid: { stroke: 'transparent' }
             }}
           />
@@ -81,9 +80,9 @@ const EntityChurnChart: React.FC = () => {
             dependentAxis
             domain={[0, Math.max(...chartData.map(d => Math.max(Number(d.Entered) || 0, Number(d.Exited) || 0, Number(d.Retained) || 0)), 1)]}
             style={{
-              axis: { stroke: theme.colors.outlineVariant },
-              tickLabels: { fill: theme.colors.onSurfaceVariant, fontSize: 8 },
-              grid: { stroke: theme.colors.outlineVariant, strokeDasharray: "4, 4" }
+              axis: { stroke: theme.palette.divider },
+              tickLabels: { fill: theme.palette.text.secondary, fontSize: 8 },
+              grid: { stroke: theme.palette.divider, strokeDasharray: "4, 4" }
             }}
           />
           
@@ -111,27 +110,27 @@ const EntityChurnChart: React.FC = () => {
             />
           </VictoryGroup>
         </VictoryChart>
-      </View>
+      </Box>
 
-       <View style={styles.legendContainer}>
-        <View style={styles.legendItem}>
-          <View style={[styles.colorDot, { backgroundColor: "#1DB954" }]} />
-          <Text variant="labelSmall">Entered</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.colorDot, { backgroundColor: "#E91E63" }]} />
-          <Text variant="labelSmall">Exited</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.colorDot, { backgroundColor: "#42A5F5" }]} />
-          <Text variant="labelSmall">Retained</Text>
-        </View>
-      </View>
-    </View>
+       <Box sx={styles.legendContainer}>
+        <Box sx={styles.legendItem}>
+          <Box sx={{ ...styles.colorDot,  backgroundColor: "#1DB954"  }} />
+          <Typography variant="caption">Entered</Typography>
+        </Box>
+        <Box sx={styles.legendItem}>
+          <Box sx={{ ...styles.colorDot,  backgroundColor: "#E91E63"  }} />
+          <Typography variant="caption">Exited</Typography>
+        </Box>
+        <Box sx={styles.legendItem}>
+          <Box sx={{ ...styles.colorDot,  backgroundColor: "#42A5F5"  }} />
+          <Typography variant="caption">Retained</Typography>
+        </Box>
+      </Box>
+    </Box>
   );
 };
 
-const styles = StyleSheet.create({
+const styles = {
   container: {
     padding: 8,
     alignItems: 'center'
@@ -165,7 +164,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginRight: 4,
   }
-});
+};
 
 export default EntityChurnChart;
 

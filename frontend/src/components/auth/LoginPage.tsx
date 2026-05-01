@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Dimensions, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { Text, TextInput, Button, Card, HelperText, useTheme } from 'react-native-paper';
+import { Box, CardContent } from '@mui/material';
+import { Typography, TextField, InputAdornment, Button, Card, FormHelperText, useTheme, IconButton, Icon } from '@mui/material';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 
@@ -36,67 +36,67 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.flex}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-            <View style={styles.header}>
-                <Text variant="displaySmall" style={styles.title}>Welcome</Text>
-                <Text variant="bodyLarge" style={styles.subtitle}>
+    <Box sx={{ ...styles.container,  backgroundColor: theme.palette.background.default  }}>
+      <Box sx={{ flex: 1 }}>
+        <Box sx={{ overflowY: "auto", ...styles.scrollContent }}>
+            <Box sx={styles.header}>
+                <Typography variant="h4" style={styles.title}>Welcome</Typography>
+                <Typography variant="body1" sx={styles.subtitle}>
                     Enter your password to access your Spotify stats
-                </Text>
-            </View>
+                </Typography>
+            </Box>
 
             <Card style={styles.card}>
-                <Card.Content>
-                    <TextInput
+                <CardContent>
+                    <TextField
                         label="Password"
                         value={password}
-                        onChangeText={setPassword}
-                        secureTextEntry={!showPassword}
-                        right={
-                            <TextInput.Icon 
-                                icon={showPassword ? "eye-off" : "eye"} 
-                                onPress={() => setShowPassword(!showPassword)} 
-                            />
-                        }
-                        mode="outlined"
+                        onChange={(e) => setPassword(e.target.value)}
+                        type={showPassword ? 'text' : 'password'}
+                        InputProps={{
+                            endAdornment: (
+                                <InputAdornment position="end">
+                                    <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
+                                        <Icon>{showPassword ? "visibility_off" : "visibility"}</Icon>
+                                    </IconButton>
+                                </InputAdornment>
+                            )
+                        }}
+                        variant="outlined"
                         error={!!error}
                         disabled={loading}
                     />
                     {error && (
-                        <HelperText type="error" visible={!!error}>
+                        <FormHelperText error={!!error}>
                             {error}
-                        </HelperText>
+                        </FormHelperText>
                     )}
 
                     <Button 
-                        mode="contained" 
-                        onPress={handleLogin} 
-                        loading={loading}
+                        variant="contained" 
+                        onClick={handleLogin} 
+                        
                         disabled={loading}
                         style={styles.button}
-                        contentStyle={styles.buttonContent}
+                        
                     >
                         Explore Stats
                     </Button>
-                </Card.Content>
+                </CardContent>
             </Card>
 
-            <View style={styles.footer}>
-                <Text variant="labelSmall" style={styles.footerText}>
+            <Box sx={styles.footer}>
+                <Typography variant="caption" style={styles.footerText}>
                     &copy; {new Date().getFullYear()} Personal Spotify Stats
-                </Text>
-            </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </View>
+                </Typography>
+            </Box>
+        </Box>
+      </Box>
+    </Box>
   );
 };
 
-const styles = StyleSheet.create({
+const styles = {
   container: {
     flex: 1,
   },
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   subtitle: {
-    textAlign: 'center',
+    textAlign: "center",
     opacity: 0.7,
   },
   card: {
@@ -140,6 +140,6 @@ const styles = StyleSheet.create({
   footerText: {
     opacity: 0.5,
   }
-});
+};
 
 export default LoginPage;
