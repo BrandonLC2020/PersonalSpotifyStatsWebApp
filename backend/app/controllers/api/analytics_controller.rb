@@ -2,18 +2,32 @@ class Api::AnalyticsController < ApplicationController
   # GET /api/analytics/artist_track_dominance
   # Shows how many top track slots each artist occupies per month
   def artist_track_dominance
-    tracks = params[:year] ? Track.for_year(params[:year].to_i) : Track.order(year: :desc, month: :desc, standing: :asc)
+    query = params[:year] ? Track.for_year(params[:year].to_i) : Track.order(year: :desc, month: :desc, standing: :asc)
+    
+    # Use pluck to fetch only necessary columns
+    data = query.pluck(:year, :month, :artist_ids)
 
-    grouped = tracks.group_by { |t| [t.year, t.month] }
+    grouped = data.group_by { |year, month, _| [year, month] }
 
     # Build artist name lookup from Artist table
     artist_names = Artist.pluck(:artist_id, :name).to_h
 
-    response_data = grouped.map do |(year, month), month_tracks|
+    response_data = grouped.map do |(year, month), rows|
       artist_counts = Hash.new(0)
 
-      month_tracks.each do |track|
-        ids = track.parsed_artist_ids
+      rows.each do |_, _, artist_ids_raw|
+        # Replicate parsed_artist_ids logic from Track model for raw data
+        ids = if artist_ids_raw.is_a?(String)
+                begin
+                  JSON.parse(artist_ids_raw)
+                rescue
+                  []
+                end
+              else
+                artist_ids_raw || []
+              end
+        ids = [ids] unless ids.is_a?(Array)
+
         ids.each do |artist_id|
           name = artist_names[artist_id] || artist_id
           artist_counts[name] += 1
@@ -21,8 +35,8 @@ class Api::AnalyticsController < ApplicationController
       end
 
       {
-        year: year,
-        month: month,
+        year: year.to_i,
+        month: month.to_i,
         artists: artist_counts.sort_by { |_, count| -count }.map { |name, count| { name: name, track_count: count } }
       }
     end
@@ -33,31 +47,35 @@ class Api::AnalyticsController < ApplicationController
   # GET /api/analytics/album_concentration
   # Shows how many tracks come from each album per month
   def album_concentration
-    tracks = params[:year] ? Track.for_year(params[:year].to_i) : Track.order(year: :desc, month: :desc, standing: :asc)
-
-    grouped = tracks.group_by { |t| [t.year, t.month] }
-
-    # Build album name lookup
-    album_info = Album.pluck(:album_id, :name, :album_type).each_with_object({}) do |(id, name, type), h|
+    tracks_query = params[:year] ? Track.where(year: params[:year].to_i) : Track.all
+    
+    # Group by year, month, and album_id in DB
+    counts = tracks_query.group(:year, :month, :album_id).count
+    
+    # Fetch album details efficiently
+    album_ids = counts.keys.map(&:last).compact.uniq
+    album_info = Album.where(album_id: album_ids).pluck(:album_id, :name, :album_type).each_with_object({}) do |(id, name, type), h|
       h[id] = { name: name, album_type: type }
     end
 
-    response_data = grouped.map do |(year, month), month_tracks|
-      album_counts = Hash.new(0)
-      month_tracks.each { |t| album_counts[t.album_id] += 1 if t.album_id.present? }
+    # Group results by [year, month] for the final response
+    grouped_response = counts.each_with_object({}) do |((year, month, album_id), count), h|
+      next if album_id.nil?
+      h[[year, month]] ||= []
+      info = album_info[album_id] || { name: album_id, album_type: 'unknown' }
+      h[[year, month]] << {
+        album_id: album_id,
+        name: info[:name],
+        track_count: count,
+        album_type: info[:album_type]
+      }
+    end
 
+    response_data = grouped_response.map do |(year, month), albums|
       {
         year: year,
         month: month,
-        albums: album_counts.sort_by { |_, count| -count }.map do |album_id, count|
-          info = album_info[album_id] || { name: album_id, album_type: 'unknown' }
-          {
-            album_id: album_id,
-            name: info[:name],
-            track_count: count,
-            album_type: info[:album_type]
-          }
-        end
+        albums: albums.sort_by { |a| -a[:track_count] }
       }
     end
 
@@ -65,67 +83,40 @@ class Api::AnalyticsController < ApplicationController
   end
 
   # GET /api/analytics/new_vs_catalog
-  # Categorizes tracks by their album release date age
+  # Categorizes tracks by their album release date age using SQL aggregation
   def new_vs_catalog
-    tracks = params[:year] ? Track.for_year(params[:year].to_i) : Track.order(year: :desc, month: :desc, standing: :asc)
+    year_condition = params[:year].present? ? "AND tracks.year = #{ActiveRecord::Base.connection.quote(params[:year])}" : ""
 
-    grouped = tracks.group_by { |t| [t.year, t.month] }
+    # SQL logic to categorize tracks based on release date age relative to the record month
+    # new: <= 180 days, recent: 181-730 days, catalog: > 730 days or unknown
+    # We use CAST(tracks.month AS UNSIGNED) to ensure chronological sorting since month is stored as a string
+    sql = <<~SQL
+      SELECT 
+        tracks.year, 
+        tracks.month,
+        SUM(CASE WHEN DATEDIFF(STR_TO_DATE(CONCAT(tracks.year, '-', tracks.month, '-01'), '%Y-%m-%d'), albums.release_date) <= 180 THEN 1 ELSE 0 END) as new_count,
+        SUM(CASE WHEN DATEDIFF(STR_TO_DATE(CONCAT(tracks.year, '-', tracks.month, '-01'), '%Y-%m-%d'), albums.release_date) > 180 AND DATEDIFF(STR_TO_DATE(CONCAT(tracks.year, '-', tracks.month, '-01'), '%Y-%m-%d'), albums.release_date) <= 730 THEN 1 ELSE 0 END) as recent_count,
+        SUM(CASE WHEN DATEDIFF(STR_TO_DATE(CONCAT(tracks.year, '-', tracks.month, '-01'), '%Y-%m-%d'), albums.release_date) > 730 OR albums.release_date IS NULL OR DATEDIFF(STR_TO_DATE(CONCAT(tracks.year, '-', tracks.month, '-01'), '%Y-%m-%d'), albums.release_date) IS NULL THEN 1 ELSE 0 END) as catalog_count
+      FROM tracks
+      LEFT JOIN albums ON tracks.album_id = albums.album_id
+      WHERE tracks.year IS NOT NULL AND tracks.month IS NOT NULL #{year_condition}
+      GROUP BY tracks.year, tracks.month
+      ORDER BY tracks.year ASC, CAST(tracks.month AS UNSIGNED) ASC
+    SQL
 
-    # Build album release date lookup
-    album_dates = Album.pluck(:album_id, :release_date).to_h
+    results = ActiveRecord::Base.connection.exec_query(sql)
 
-    response_data = grouped.filter_map do |(year, month), month_tracks|
-      # Skip records with nil or non-numeric year/month
-      next unless year.is_a?(Integer) && month.is_a?(Integer)
-
-      begin
-        reference_date = Date.new(year, month, 1)
-      rescue ArgumentError, TypeError
-        next
-      end
-
-      new_count = 0
-      recent_count = 0
-      catalog_count = 0
-
-      month_tracks.each do |track|
-        release_str = album_dates[track.album_id]
-        next unless release_str.present?
-
-        begin
-          release_str = release_str.to_s if release_str.is_a?(Date)
-
-          # Handle various Spotify date formats: "2024-01-15", "2024-01", "2024"
-          release_date = case release_str.length
-                         when 4 then Date.new(release_str.to_i, 1, 1)
-                         when 7 then Date.parse("#{release_str}-01")
-                         else Date.parse(release_str)
-                         end
-
-          months_old = ((reference_date - release_date) / 30).to_i
-
-          if months_old <= 6
-            new_count += 1
-          elsif months_old <= 24
-            recent_count += 1
-          else
-            catalog_count += 1
-          end
-        rescue Date::Error, TypeError, ArgumentError
-          catalog_count += 1 # default to catalog if date can't be parsed
-        end
-      end
-
+    response_data = results.map do |row|
       {
-        year: year,
-        month: month,
-        new_count: new_count,
-        recent_count: recent_count,
-        catalog_count: catalog_count
+        year: row['year'].to_i,
+        month: row['month'].to_i,
+        new_count: row['new_count'].to_i,
+        recent_count: row['recent_count'].to_i,
+        catalog_count: row['catalog_count'].to_i
       }
     end
 
-    render json: response_data.sort_by { |d| [d[:year], d[:month]] }
+    render json: response_data
   end
 
   # GET /api/analytics/entity_churn?type=tracks|artists|albums
@@ -142,19 +133,20 @@ class Api::AnalyticsController < ApplicationController
                         return
                       end
 
-    records = model.order(year: :asc, month: :asc, standing: :asc)
-    grouped = records.group_by { |r| [r.year, r.month] }.sort
+    # Use pluck to fetch only necessary columns
+    data = model.order(year: :asc, month: :asc, standing: :asc).pluck(:year, :month, id_field)
+    grouped = data.group_by { |year, month, _| [year, month] }.sort
 
     response_data = []
     previous_ids = Set.new
 
-    grouped.each_with_index do |((year, month), month_records), index|
-      current_ids = Set.new(month_records.map { |r| r.send(id_field) })
+    grouped.each_with_index do |((year, month), month_rows), index|
+      current_ids = Set.new(month_rows.map { |row| row[2] })
 
       if index == 0
         response_data << {
-          year: year,
-          month: month,
+          year: year.to_i,
+          month: month.to_i,
           entered: current_ids.to_a,
           exited: [],
           retained_count: 0
@@ -165,8 +157,8 @@ class Api::AnalyticsController < ApplicationController
         retained = (current_ids & previous_ids).size
 
         response_data << {
-          year: year,
-          month: month,
+          year: year.to_i,
+          month: month.to_i,
           entered: entered,
           exited: exited,
           retained_count: retained
