@@ -237,4 +237,43 @@ class Api::AnalyticsController < ApplicationController
       unique_albums: year_albums.distinct.count(:album_id)
     }
   end
+
+  # GET /api/analytics/genre_evolution
+  # Tracks how music taste categories evolve over time
+  def genre_evolution
+    # Fetch all artists with their genres
+    artists_data = Artist.pluck(:year, :month, :genres)
+    
+    # Load mappings
+    mappings = GenreMapping.pluck(:name, :parent_genre).to_h
+    
+    grouped = artists_data.group_by { |year, month, _| [year, month] }
+    
+    response_data = grouped.map do |(year, month), rows|
+      category_counts = Hash.new(0)
+      total_genres = 0
+      
+      rows.each do |_, _, genres_raw|
+        genres = genres_raw.is_a?(String) ? (JSON.parse(genres_raw) rescue []) : (genres_raw || [])
+        genres.each do |g|
+          parent = mappings[g] || "Other"
+          category_counts[parent] += 1
+          total_genres += 1
+        end
+      end
+      
+      # Calculate percentage share
+      shares = category_counts.map do |cat, count|
+        { category: cat, percentage: ((count.to_f / total_genres) * 100).round(1) }
+      end
+      
+      {
+        year: year.to_i,
+        month: month.to_i,
+        genres: shares.sort_by { |s| -s[:percentage] }
+      }
+    end
+    
+    render json: response_data.sort_by { |d| [d[:year], d[:month]] }
+  end
 end

@@ -87,4 +87,11 @@ class Api::AnalyticsControllerTest < ActionDispatch::IntegrationTest
       assert_includes first_item.keys, "retained_count"
     end
   end
+
+  test "should get genre_evolution" do
+    get api_analytics_genre_evolution_url, headers: @headers
+    assert_response :success
+    json = JSON.parse(response.body)
+    assert_kind_of Array, json
+  end
 end

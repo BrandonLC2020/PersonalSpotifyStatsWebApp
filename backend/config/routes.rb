@@ -12,5 +12,6 @@ Rails.application.routes.draw do
     get 'analytics/new_vs_catalog', to: 'analytics#new_vs_catalog'
     get 'analytics/entity_churn', to: 'analytics#entity_churn'
     get 'analytics/year_summary', to: 'analytics#year_summary'
+    get 'analytics/genre_evolution', to: 'analytics#genre_evolution'
   end
 end
