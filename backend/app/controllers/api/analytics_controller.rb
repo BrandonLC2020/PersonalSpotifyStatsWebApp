@@ -276,4 +276,162 @@ class Api::AnalyticsController < ApplicationController
     
     render json: response_data.sort_by { |d| [d[:year], d[:month]] }
   end
+
+  # GET /api/analytics/automated_insights
+  def automated_insights
+    insights = []
+    
+    # 1. Consistency King
+    # Identify the artist with the longest continuous streak of monthly appearances in the top 50.
+    artist_appearances = Artist.where('standing <= 50')
+                               .order(:year)
+                               .order(Arel.sql('CAST(month AS UNSIGNED) ASC'))
+                               .pluck(:year, :month, :artist_id, :name)
+    grouped_by_month = artist_appearances.group_by { |year, month, _, _| [year.to_i, month.to_i] }.sort
+    
+    all_months = grouped_by_month.map(&:first)
+    artist_streaks = {} # artist_id => { current_streak: 0, max_streak: 0, last_month_index: -1, name: "" }
+    
+    all_months.each_with_index do |month_key, index|
+      current_month_artists = grouped_by_month.find { |k, _| k == month_key }[1]
+      current_month_artist_ids = current_month_artists.map { |r| r[2] }.uniq
+      
+      current_month_artist_ids.each do |artist_id|
+        name = current_month_artists.find { |r| r[2] == artist_id }[3]
+        streak_info = artist_streaks[artist_id] ||= { current_streak: 0, max_streak: 0, last_month_index: -1, name: name }
+        
+        if streak_info[:last_month_index] == index - 1
+          streak_info[:current_streak] += 1
+        else
+          streak_info[:current_streak] = 1
+        end
+        
+        streak_info[:last_month_index] = index
+        streak_info[:max_streak] = [streak_info[:max_streak], streak_info[:current_streak]].max
+      end
+    end
+    
+    king = artist_streaks.values.max_by { |s| s[:max_streak] }
+    
+    if king && king[:max_streak] > 1
+      insights << {
+        type: "consistency_king",
+        title: "Consistency King",
+        description: "#{king[:name]} has been in your top lists for #{king[:max_streak]} months in a row!",
+        icon: "star",
+        data: { artist_name: king[:name], streak: king[:max_streak] }
+      }
+    end
+
+    # 2. Top Discovery
+    # Find the first occurrence of a track_id or artist_id. If that first occurrence has a standing <= 10, flag it as a "Top Discovery".
+    # For tracks:
+    track_firsts = Track.order(:year)
+                        .order(Arel.sql('CAST(month AS UNSIGNED) ASC'))
+                        .pluck(:track_id, :year, :month, :standing, :name)
+    tracked_ids = Set.new
+    track_firsts.each do |tid, y, m, s, n|
+      unless tracked_ids.include?(tid)
+        if s.to_i <= 10
+          insights << {
+            type: "top_discovery",
+            title: "Top Discovery",
+            description: "You discovered '#{n}' and it immediately hit your top 10 in #{Date::MONTHNAMES[m.to_i]} #{y}!",
+            icon: "new_releases",
+            data: { name: n, month: m.to_i, year: y.to_i, type: "track" }
+          }
+        end
+        tracked_ids.add(tid)
+      end
+    end
+
+    # For artists:
+    artist_firsts = Artist.order(:year)
+                          .order(Arel.sql('CAST(month AS UNSIGNED) ASC'))
+                          .pluck(:artist_id, :year, :month, :standing, :name)
+    tracked_artist_ids = Set.new
+    artist_firsts.each do |aid, y, m, s, n|
+      unless tracked_artist_ids.include?(aid)
+        if s.to_i <= 10
+          insights << {
+            type: "top_discovery",
+            title: "Top Discovery",
+            description: "You discovered #{n} and they immediately hit your top 10 in #{Date::MONTHNAMES[m.to_i]} #{y}!",
+            icon: "person_add",
+            data: { name: n, month: m.to_i, year: y.to_i, type: "artist" }
+          }
+        end
+        tracked_artist_ids.add(aid)
+      end
+    end
+
+    # 3. Nostalgia Factor
+    # Calculate the percentage of "Catalog" tracks (released > 2 years prior to the snapshot month) for each month.
+    # Flag months where Catalog > 40%.
+    sql = <<~SQL
+      SELECT 
+        tracks.year, 
+        tracks.month,
+        COUNT(*) as total_count,
+        SUM(CASE WHEN DATEDIFF(STR_TO_DATE(CONCAT(tracks.year, '-', tracks.month, '-01'), '%Y-%m-%d'), albums.release_date) > 730 THEN 1 ELSE 0 END) as catalog_count
+      FROM tracks
+      LEFT JOIN albums ON tracks.album_id = albums.album_id
+      WHERE tracks.year IS NOT NULL AND tracks.month IS NOT NULL
+      GROUP BY tracks.year, tracks.month
+      ORDER BY tracks.year ASC, CAST(tracks.month AS UNSIGNED) ASC
+    SQL
+    
+    nostalgia_results = ActiveRecord::Base.connection.exec_query(sql)
+    nostalgia_results.each do |row|
+      total = row['total_count'].to_f
+      catalog = row['catalog_count'].to_f
+      if total > 0 && (catalog / total) > 0.4
+        percentage = ((catalog / total) * 100).round(1)
+        insights << {
+          type: "nostalgia_factor",
+          title: "Nostalgia Factor",
+          description: "In #{Date::MONTHNAMES[row['month'].to_i]} #{row['year']}, #{percentage}% of your music was over 2 years old. Feeling nostalgic?",
+          icon: "history",
+          data: { month: row['month'].to_i, year: row['year'].to_i, percentage: percentage }
+        }
+      end
+    end
+
+    # 4. Genre Pivot
+    # Compare the #1 parent genre of month N with month N-1. If it changes, flag it as a "Taste Shift".
+    # Reuse some logic from genre_evolution but specifically for the top genre
+    artists_data = Artist.pluck(:year, :month, :genres)
+    mappings = GenreMapping.pluck(:name, :parent_genre).to_h
+    grouped = artists_data.group_by { |year, month, _| [year.to_i, month.to_i] }.sort
+    
+    previous_top_genre = nil
+    
+    grouped.each do |(year, month), rows|
+      category_counts = Hash.new(0)
+      rows.each do |_, _, genres_raw|
+        genres = genres_raw.is_a?(String) ? (JSON.parse(genres_raw) rescue []) : (genres_raw || [])
+        genres.each do |g|
+          parent = mappings[g] || "Other"
+          category_counts[parent] += 1
+        end
+      end
+      
+      current_top_genre = category_counts.max_by { |_, count| count }&.first
+      
+      if previous_top_genre && current_top_genre && current_top_genre != previous_top_genre
+        insights << {
+          type: "taste_shift",
+          title: "Taste Shift",
+          description: "In #{Date::MONTHNAMES[month]}, your top genre shifted from #{previous_top_genre} to #{current_top_genre}!",
+          icon: "trending_up",
+          data: { month: month, year: year, from: previous_top_genre, to: current_top_genre }
+        }
+      end
+      
+      previous_top_genre = current_top_genre
+    end
+
+    render json: insights
+  end
+
 end

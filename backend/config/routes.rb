@@ -13,5 +13,6 @@ Rails.application.routes.draw do
     get 'analytics/entity_churn', to: 'analytics#entity_churn'
     get 'analytics/year_summary', to: 'analytics#year_summary'
     get 'analytics/genre_evolution', to: 'analytics#genre_evolution'
+    get 'analytics/automated_insights', to: 'analytics#automated_insights'
   end
 end
