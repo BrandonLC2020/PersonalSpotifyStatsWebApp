@@ -193,3 +193,22 @@ export interface PersonalityResult {
   stats: { label: string; value: string | number }[];
   secondary: PersonalityType[];
 }
+
+export interface GenreShare {
+  category: string;
+  percentage: number;
+}
+
+export interface GenreEvolutionMonth {
+  year: number;
+  month: number;
+  genres: GenreShare[];
+}
+
+export interface Insight {
+  type: string;
+  title: string;
+  description: string;
+  icon: string;
+  data: any;
+}
