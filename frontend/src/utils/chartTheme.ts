@@ -109,7 +109,9 @@ export const formatDuration = (ms: number): string => {
  */
 export const getMonthLabel = (month: number, year: number): string => {
   const date = new Date(year, month - 1);
-  return date.toLocaleString('en-US', { month: 'short', year: 'numeric' });
+  const m = date.toLocaleString('en-US', { month: 'short' });
+  const y = date.toLocaleString('en-US', { year: '2-digit' });
+  return `${m} '${y}`;
 };
 
 /**
