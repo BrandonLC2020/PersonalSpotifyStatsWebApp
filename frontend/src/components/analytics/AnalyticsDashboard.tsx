@@ -1,18 +1,20 @@
-import React from 'react';
-import { Box, CardContent, CardHeader } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, CardContent, CardHeader, Tabs, Tab, Divider } from '@mui/material';
 import { Typography, Card, CircularProgress, useTheme } from '@mui/material';
 import useAnalyticsData from '../../hooks/useAnalyticsData';
 import RankingMovementChart from './charts/RankingMovementChart';
 import GenreDiversityChart from './charts/GenreDiversityChart';
 import ExplicitContentChart from './charts/ExplicitContentChart';
 import ArtistDominanceChart from './charts/ArtistDominanceChart';
+import AdvancedInsights from './pages/AdvancedInsights';
 
 const AnalyticsDashboard = () => {
   const { tracks, artists, allMonths, loading, error } = useAnalyticsData();
   const theme = useTheme();
+  const [tabValue, setTabValue] = useState(0);
 
   if (loading) {
-    return <CircularProgress style={styles.centered} size="large" />;
+    return <Box sx={styles.centered}><CircularProgress size="large" /></Box>;
   }
 
   if (error) {
@@ -23,61 +25,85 @@ const AnalyticsDashboard = () => {
     );
   }
 
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
+  };
+
   const totalMonths = allMonths.length;
   const uniqueTracks = new Set(tracks.flatMap(g => g.records.map(r => r.track_id))).size;
   const uniqueArtists = new Set(artists.flatMap(g => g.records.map(r => r.artist_id))).size;
 
   return (
     <Box sx={{ overflowY: "auto", ...styles.container }}>
-      <Box sx={styles.header}>
-        <Typography variant="h4" style={styles.title}>Your Stats</Typography>
-        <Typography variant="body1" sx={styles.subtitle}>
-          Deep insights into your music taste across {totalMonths} months of data
-        </Typography>
+      <Box sx={{ position: 'sticky', top: 0, bgcolor: 'background.default', zIndex: 10 }}>
+        <Tabs 
+          value={tabValue} 
+          onChange={handleTabChange} 
+          centered 
+          textColor="primary" 
+          indicatorColor="primary"
+          sx={{ borderBottom: 1, borderColor: 'divider' }}
+        >
+          <Tab label="Overview" />
+          <Tab label="Advanced" />
+        </Tabs>
       </Box>
 
-      <Box sx={styles.statsRow}>
-        <Card style={styles.statCard}>
-          <CardContent>
-            <Typography variant="h5" style={styles.statValue}>{uniqueTracks}</Typography>
-            <Typography variant="body2">Tracks</Typography>
-          </CardContent>
-        </Card>
-        <Card style={styles.statCard}>
-          <CardContent>
-            <Typography variant="h5" style={styles.statValue}>{uniqueArtists}</Typography>
-            <Typography variant="body2">Artists</Typography>
-          </CardContent>
-        </Card>
-      </Box>
+      {tabValue === 0 ? (
+        <>
+          <Box sx={styles.header}>
+            <Typography variant="h4" style={styles.title}>Your Stats</Typography>
+            <Typography variant="body1" sx={styles.subtitle}>
+              Deep insights into your music taste across {totalMonths} months of data
+            </Typography>
+          </Box>
 
-      <Card style={styles.chartCard}>
-        <CardHeader title="Ranking Movement" subtitle="Top track and artist history" />
-        <CardContent>
-            <RankingMovementChart tracks={tracks} artists={artists} />
-        </CardContent>
-      </Card>
+          <Box sx={styles.statsRow}>
+            <Card style={styles.statCard}>
+              <CardContent>
+                <Typography variant="h5" style={styles.statValue}>{uniqueTracks}</Typography>
+                <Typography variant="body2">Tracks</Typography>
+              </CardContent>
+            </Card>
+            <Card style={styles.statCard}>
+              <CardContent>
+                <Typography variant="h5" style={styles.statValue}>{uniqueArtists}</Typography>
+                <Typography variant="body2">Artists</Typography>
+              </CardContent>
+            </Card>
+          </Box>
 
-      <Card style={styles.chartCard}>
-        <CardHeader title="Explicit Content" subtitle="Ratio of explicit vs clean tracks" />
-        <CardContent>
-            <ExplicitContentChart tracks={tracks} />
-        </CardContent>
-      </Card>
+          <Card style={styles.chartCard}>
+            <CardHeader title="Ranking Movement" subtitle="Top track and artist history" />
+            <CardContent>
+                <RankingMovementChart tracks={tracks} artists={artists} />
+            </CardContent>
+          </Card>
 
-      <Card style={styles.chartCard}>
-        <CardHeader title="Genre Diversity" subtitle="Distribution of your music taste" />
-        <CardContent>
-            <GenreDiversityChart artists={artists} />
-        </CardContent>
-      </Card>
+          <Card style={styles.chartCard}>
+            <CardHeader title="Explicit Content" subtitle="Ratio of explicit vs clean tracks" />
+            <CardContent>
+                <ExplicitContentChart tracks={tracks} />
+            </CardContent>
+          </Card>
 
-      <Card style={styles.chartCard}>
-        <CardHeader title="Artist Dominance" subtitle="Share of top tracks by artist" />
-        <CardContent>
-            <ArtistDominanceChart />
-        </CardContent>
-      </Card>
+          <Card style={styles.chartCard}>
+            <CardHeader title="Genre Diversity" subtitle="Distribution of your music taste" />
+            <CardContent>
+                <GenreDiversityChart artists={artists} />
+            </CardContent>
+          </Card>
+
+          <Card style={styles.chartCard}>
+            <CardHeader title="Artist Dominance" subtitle="Share of top tracks by artist" />
+            <CardContent>
+                <ArtistDominanceChart />
+            </CardContent>
+          </Card>
+        </>
+      ) : (
+        <AdvancedInsights />
+      )}
 
       <Box sx={styles.footer}>
         <Typography variant="caption" style={styles.footerText}>
