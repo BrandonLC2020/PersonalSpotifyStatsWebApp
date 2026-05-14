@@ -89,9 +89,36 @@ class Api::AnalyticsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should get genre_evolution" do
+    # Create specific data for genre evolution test
+    GenreMapping.create!(name: 'pop rap', parent_genre: 'Hip Hop')
+    GenreMapping.create!(name: 'trap', parent_genre: 'Hip Hop')
+    GenreMapping.create!(name: 'synthpop', parent_genre: 'Pop')
+    
+    Artist.create!(artist_id: 'artist_genre_1', name: 'Hip Hop Artist', year: 2024, month: 2, standing: 1, genres: ['pop rap', 'trap'].to_json)
+    Artist.create!(artist_id: 'artist_genre_2', name: 'Pop Artist', year: 2024, month: 2, standing: 2, genres: ['synthpop'].to_json)
+    Artist.create!(artist_id: 'artist_genre_3', name: 'Other Artist', year: 2024, month: 2, standing: 3, genres: ['unknown genre'].to_json)
+
     get api_analytics_genre_evolution_url, headers: @headers
     assert_response :success
     json = JSON.parse(response.body)
     assert_kind_of Array, json
+    
+    # Find the entry for 2024-02
+    month_data = json.find { |d| d['year'] == 2024 && d['month'] == 2 }
+    assert_not_nil month_data
+    
+    genres = month_data['genres']
+    # Total genres: 2 (Hip Hop Artist) + 1 (Pop Artist) + 1 (Other Artist) = 4
+    # Hip Hop: 2/4 = 50.0%
+    # Pop: 1/4 = 25.0%
+    # Other: 1/4 = 25.0%
+    
+    hip_hop = genres.find { |g| g['category'] == 'Hip Hop' }
+    pop = genres.find { |g| g['category'] == 'Pop' }
+    other = genres.find { |g| g['category'] == 'Other' }
+    
+    assert_equal 50.0, hip_hop['percentage']
+    assert_equal 25.0, pop['percentage']
+    assert_equal 25.0, other['percentage']
   end
 end

@@ -9,4 +9,10 @@ class Artist < ApplicationRecord
     g = genres.is_a?(String) ? (JSON.parse(genres) rescue []) : genres
     g.is_a?(Array) ? g : [g]
   end
+
+  def mapped_genres
+    mappings = GenreMapping.where(name: parsed_genres).pluck(:parent_genre)
+    # Ensure we handle genres without mappings if necessary, or just return the mapped ones
+    mappings
+  end
 end
